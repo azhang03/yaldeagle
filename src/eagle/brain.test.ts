@@ -99,7 +99,8 @@ describe('brain', () => {
         }
         if (!boundsContains(bounds, pose.x, pose.z)) problem = `outside at t = ${t.toFixed(2)}`;
       }
-      // About 0.75 s for each hop and pause. Rests and squawks take part of the time.
+      // About 1.2 s for each hop and its pause (about 20 hops each minute in a browser run).
+      // Rests, turns, and squawks take part of the time.
       if (!problem && hops <= 100) problem = `only ${hops} hops`;
       if (problem) problems.push(`seed ${seed}: ${problem}`);
     }

@@ -11,8 +11,8 @@ export const TUNING = {
     air: 0.3,
     land: 0.16,
   },
-  /** A short stop between hops. */
-  pause: { min: 0.05, max: 0.4 },
+  /** A short stop after each hop and turn. */
+  pause: { min: 0.3, max: 0.9 },
   /** A long stop at a goal, with the head looking around. */
   rest: { min: 1.5, max: 4 },
   squawk: { duration: 0.75 },
@@ -26,8 +26,14 @@ export const TUNING = {
     hold: { min: 0.5, max: 2.3 },
   },
   goal: {
-    /** A new goal is at least this far away, if the bounds allow it. */
-    minDistance: 1.2,
+    /** A new goal is a whole number of hops away, in a straight line. */
+    hops: { min: 2, max: 6 },
+    /**
+     * The chance of each new direction: straight on, one 45° step to a side, or two steps. A
+     * direction counts only if all its hops stay in the bounds. If none of these fit, each
+     * direction that fits has the same chance.
+     */
+    turn: { none: 0.6, one: 0.3, two: 0.1 },
     /**
      * The eagle is at the goal when it is nearer than this many hop lengths. It must be more than
      * about 0.54: a hop can point 22.5° away from the goal, and then a shorter distance can grow.

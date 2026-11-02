@@ -1,6 +1,6 @@
 // Decides what the eagle does next. This file has no Three.js and no DOM, so tests can run it
 // without a browser, and a mini game can use it again.
-import { boundsContains, boundsPoint, type Bounds } from '../lib/bounds';
+import { boundsContains, type Bounds } from '../lib/bounds';
 import type { Random } from '../lib/rng';
 import {
   facingVector,
@@ -65,15 +65,47 @@ export function createBrain(random: Random, initialBounds: Bounds, start: Pose):
     return action;
   }
 
-  /** A random point in the bounds, far enough away. Null if no try finds one. */
+  /**
+   * A goal a whole number of hops away in a straight line, so the eagle does not turn on the
+   * way. Mostly straight on (TUNING.goal.turn). All hops stay in the bounds, because the bounds
+   * are convex and both ends are inside. Null if no line fits.
+   */
   function newGoal(): Point | null {
-    for (let i = 0; i < 8; i++) {
-      const u = between(-bounds.halfU, bounds.halfU);
-      const v = between(-bounds.halfV, bounds.halfV);
-      const p = boundsPoint(bounds, u, v);
-      if (Math.hypot(p.x - x, p.z - z) >= TUNING.goal.minDistance) return p;
+    const { hops, turn } = TUNING.goal;
+    const length = TUNING.hop.length;
+    // The weight of each turn size, from 0 to 4 steps. The two sides share the weight.
+    const weights = [turn.none, turn.one / 2, turn.two / 2, 0, 0];
+    const options: { facing: number; fit: number; weight: number }[] = [];
+    for (let d = -3; d <= 4; d++) {
+      const direction = (facing + d + 8) % 8;
+      const step = facingVector(direction);
+      let fit = 0;
+      while (
+        fit < hops.max &&
+        boundsContains(bounds, x + step.x * length * (fit + 1), z + step.z * length * (fit + 1))
+      ) {
+        fit++;
+      }
+      if (fit >= hops.min) {
+        options.push({ facing: direction, fit, weight: weights[Math.abs(d)] ?? 0 });
+      }
     }
-    return null;
+    const first = options[0];
+    if (!first) return null;
+    // If no direction with a weight fits, each direction that fits has the same chance.
+    const total = options.reduce((sum, o) => sum + o.weight, 0);
+    let r = random() * (total > 0 ? total : options.length);
+    let pick = first;
+    for (const option of options) {
+      r -= total > 0 ? option.weight : 1;
+      if (r < 0) {
+        pick = option;
+        break;
+      }
+    }
+    const count = hops.min + Math.floor(random() * (pick.fit - hops.min + 1));
+    const step = facingVector(pick.facing);
+    return { x: x + step.x * length * count, z: z + step.z * length * count };
   }
 
   /** With no goal: rest, squawk, or pick a new goal (then it returns null). */
