@@ -10,3 +10,8 @@ body {
   background: #fff;
   overflow: hidden;
 }
+
+/* An inline canvas adds a gap under it, and the gap makes a scroll bar. */
+canvas {
+  display: block;
+}

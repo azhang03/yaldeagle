@@ -16,6 +16,8 @@ npm run dev
 
 Then open the address that Vite prints.
 
+Add `?bounds` to the address to draw the bounds on the ground. The bounds are the area that the eagle can use. This works on the live site too.
+
 ## Scripts
 
 | Script            | What it does                                             |
@@ -37,15 +39,17 @@ Live site: https://yaldeagle.vercel.app/
 
 ## Code map
 
-| Path             | Use                     |
-| ---------------- | ----------------------- |
-| `index.html`     | Page shell.             |
-| `src/main.ts`    | Start-up code.          |
-| `src/style.css`  | Page style.             |
-| `public/`        | Static files.           |
-| `vite.config.ts` | Vite and Vitest config. |
+| Path                 | Use                                                                            |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `index.html`         | Page shell.                                                                    |
+| `src/main.ts`        | Start-up code. It makes the stage and a placeholder box for the eagle.         |
+| `src/style.css`      | Page style.                                                                    |
+| `src/stage/stage.ts` | Renderer, fixed camera, light, ground, resize, and the frame loop.             |
+| `src/lib/bounds.ts`  | The ground area that the camera shows, minus a margin. No Three.js and no DOM. |
+| `public/`            | Static files.                                                                  |
+| `vite.config.ts`     | Vite and Vitest config.                                                        |
 
-Later features add `src/stage/`, `src/eagle/`, and `src/lib/`.
+Later features add `src/eagle/` and more files in `src/lib/`. Files in `src/lib/` do not import Three.js or use the DOM, so Vitest can test them without a browser.
 
 ## License
 
