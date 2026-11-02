@@ -16,7 +16,13 @@ npm run dev
 
 Then open the address that Vite prints.
 
-Add `?bounds` to the address to draw the bounds on the ground. The bounds are the area that the eagle can use. This works on the live site too.
+Options for development. Add them to the address, for example `?bounds&mounts`. They also work on the live site.
+
+| Option    | What it does                                                                                                   |
+| --------- | -------------------------------------------------------------------------------------------------------------- |
+| `?bounds` | Draws the bounds on the ground. The bounds are the area that the eagle can use.                                |
+| `?mounts` | Shows a dot on each mount point of the eagle (where gear attaches).                                            |
+| `?debug`  | Puts `yaldeagle` in the dev console, with `stage` and `eagle`. Example: `yaldeagle.eagle.jaw.rotation.x = 0.7` |
 
 ## Scripts
 
@@ -39,17 +45,20 @@ Live site: https://yaldeagle.vercel.app/
 
 ## Code map
 
-| Path                 | Use                                                                            |
-| -------------------- | ------------------------------------------------------------------------------ |
-| `index.html`         | Page shell.                                                                    |
-| `src/main.ts`        | Start-up code. It makes the stage and a placeholder box for the eagle.         |
-| `src/style.css`      | Page style.                                                                    |
-| `src/stage/stage.ts` | Renderer, fixed camera, light, ground, resize, and the frame loop.             |
-| `src/lib/bounds.ts`  | The ground area that the camera shows, minus a margin. No Three.js and no DOM. |
-| `public/`            | Static files.                                                                  |
-| `vite.config.ts`     | Vite and Vitest config.                                                        |
+| Path                         | Use                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| `index.html`                 | Page shell.                                                                    |
+| `src/main.ts`                | Start-up code. It makes the stage and the eagle.                               |
+| `src/style.css`              | Page style.                                                                    |
+| `src/stage/stage.ts`         | Renderer, fixed camera, light, ground, resize, and the frame loop.             |
+| `src/lib/bounds.ts`          | The ground area that the camera shows, minus a margin. No Three.js and no DOM. |
+| `src/eagle/model.ts`         | `buildEagle()`: the eagle from boxes, with its part tree and mount points.     |
+| `src/eagle/palette.ts`       | The colors of the eagle.                                                       |
+| `src/eagle/mount-markers.ts` | The dots for `?mounts`.                                                        |
+| `public/`                    | Static files.                                                                  |
+| `vite.config.ts`             | Vite and Vitest config.                                                        |
 
-Later features add `src/eagle/` and more files in `src/lib/`. Files in `src/lib/` do not import Three.js or use the DOM, so Vitest can test them without a browser.
+Later features add more files in `src/eagle/` and `src/lib/`. Files in `src/lib/` do not import Three.js or use the DOM, so Vitest can test them without a browser.
 
 ## License
 
