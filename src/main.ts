@@ -1,4 +1,7 @@
 import './style.css';
+import type { Pose } from './eagle/actions';
+import { createAnimator } from './eagle/animator';
+import { startManualKeys } from './eagle/manual-keys';
 import { buildEagle } from './eagle/model';
 import { addMountMarkers } from './eagle/mount-markers';
 import { createStage } from './stage/stage';
@@ -10,13 +13,19 @@ const params = new URLSearchParams(location.search);
 const stage = createStage(app, { showBounds: params.has('bounds') });
 
 const eagle = buildEagle();
-// Face +x (90°), close to the three-quarter view of the mockup. F4 sets the facing.
-eagle.root.rotation.y = Math.PI / 2;
 stage.scene.add(eagle.root);
 if (params.has('mounts')) addMountMarkers(eagle);
-// With ?debug, the dev console can reach the stage and the eagle as `yaldeagle`.
-if (params.has('debug')) Reflect.set(window, 'yaldeagle', { stage, eagle });
 
-stage.start(() => {
+// Start at the center of the bounds, facing +x (90°).
+const bounds = stage.bounds();
+const start: Pose = { x: bounds.x, z: bounds.z, facing: 2 };
+const animator = createAnimator(eagle, start);
+startManualKeys(animator, start, Math.random);
+
+// With ?debug, the dev console can reach these objects as `yaldeagle`.
+if (params.has('debug')) Reflect.set(window, 'yaldeagle', { stage, eagle, animator });
+
+stage.start((dt) => {
+  animator.update(dt);
   stage.follow(eagle.root.position.x, eagle.root.position.z);
 });
