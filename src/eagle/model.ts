@@ -1,5 +1,5 @@
-// The T2 eagle, built from boxes. The sizes come from steps2, feet, and eagleHead in the T2
-// mockup. The eagle faces +z. Its left side is +x. One unit is about the width of the eagle.
+// The eagle (design T2), built from boxes. The eagle faces +z. Its left side is +x. One unit is
+// about the width of the eagle.
 import { BoxGeometry, Group, Mesh, MeshLambertMaterial, Object3D } from 'three';
 import { PALETTE, type PaletteColor } from './palette';
 
@@ -99,6 +99,8 @@ export function buildEagle(): Eagle {
 
   // White head on a white neck, a hooked yellow beak, and one black eye on each side.
   const head = group(body, 'head', [0, 0.9, 0.12]);
+  // Turn first, then lift, then tilt. So a lift raises the beak also when the head is turned.
+  head.rotation.order = 'YXZ';
   box(head, [0.46, 0.16, 0.46], [0, 0.02, -0.02], 'white');
   box(head, [0.48, 0.42, 0.52], [0, 0.28, 0.04], 'white');
   box(head, [0.18, 0.13, 0.28], [0, 0.25, 0.43], 'beak');

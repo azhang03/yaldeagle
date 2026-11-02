@@ -1,4 +1,4 @@
-// The colors of the eagle. The values come from the T2 mockup.
+// The colors of the eagle (design T2).
 export const PALETTE = {
   /** Chest block, back block, and the feathers on the legs. */
   brown: '#55341d',
