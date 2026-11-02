@@ -33,7 +33,7 @@ Vercel builds the site from GitHub. A push to `main` deploys to production. Each
 
 CI (`.github/workflows/check.yml`) runs the checks, the tests, and the build on each pull request and each push to `main`.
 
-Live site: (added after the first deploy)
+Live site: https://yaldeagle.vercel.app/
 
 ## Code map
 
