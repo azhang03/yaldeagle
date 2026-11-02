@@ -4,7 +4,7 @@ Yaldeagle is a small 3D toy for the browser. A blocky eagle in the style of Cros
 
 ## Requirements
 
-- Node 20.19 or later. We recommend Node 22.
+- Node 20.19 or later in the 20 line, or Node 22.12 or later. CI checks Node 20 and Node 26.
 - npm.
 
 ## Run
