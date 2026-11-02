@@ -71,3 +71,15 @@ export function boundsPoint(bounds: Bounds, u: number, v: number): { x: number; 
     z: bounds.z + bounds.uz * u + bounds.ux * v,
   };
 }
+
+/** True if the world point (x, z) is inside the bounds or on the edge. */
+export function boundsContains(bounds: Bounds, x: number, z: number): boolean {
+  const dx = x - bounds.x;
+  const dz = z - bounds.z;
+  // The local position: the inverse of boundsPoint.
+  const u = dx * bounds.ux + dz * bounds.uz;
+  const v = -dx * bounds.uz + dz * bounds.ux;
+  // The tolerance covers rounding errors, so a point on the edge counts as inside.
+  const tolerance = 1e-9;
+  return Math.abs(u) <= bounds.halfU + tolerance && Math.abs(v) <= bounds.halfV + tolerance;
+}
