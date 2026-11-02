@@ -55,7 +55,6 @@ export interface Stage {
 
 export function createStage(container: HTMLElement, options: StageOptions): Stage {
   const renderer = new WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFShadowMap;
   container.appendChild(renderer.domElement);
@@ -106,6 +105,7 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
     // A hidden container has size 0. Use 1 so that the aspect stays finite.
     const width = Math.max(1, container.clientWidth);
     const height = Math.max(1, container.clientHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(width, height);
     const aspect = width / height;
     const halfHeight = Math.max(HALF_HEIGHT, MIN_HALF_WIDTH / aspect);
@@ -120,9 +120,26 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
       MARGIN,
     );
     outline?.update(bounds);
+    // setSize clears the canvas after the frame was drawn. Draw again, so a resize does not
+    // show a blank frame.
+    renderer.render(scene, camera);
   }
   resize();
   new ResizeObserver(resize).observe(container);
+  // A move to a screen with a different pixel ratio does not change the container size, so the
+  // observer does not see it. This media query does. It matches only one ratio, so make a new
+  // one after each change.
+  function watchPixelRatio(): void {
+    matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener(
+      'change',
+      () => {
+        resize();
+        watchPixelRatio();
+      },
+      { once: true },
+    );
+  }
+  watchPixelRatio();
 
   function follow(x: number, z: number): void {
     sun.target.position.set(x, 0, z);
@@ -136,7 +153,8 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
     timer.connect(document);
     renderer.setAnimationLoop((time) => {
       timer.update(time);
-      update(Math.min(timer.getDelta(), MAX_DT));
+      // The first step after a start or a hidden tab can be slightly below 0.
+      update(MathUtils.clamp(timer.getDelta(), 0, MAX_DT));
       renderer.render(scene, camera);
     });
   }
