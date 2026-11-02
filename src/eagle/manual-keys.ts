@@ -6,9 +6,10 @@ import type { Animator } from './animator';
 export function startManualKeys(animator: Animator, start: Pose, random: () => number): void {
   let { x, z, facing } = start;
 
-  function act(key: string): Action | null {
-    switch (key) {
-      case 'h': {
+  // event.code names the physical key, so Caps Lock and the keyboard layout do not matter.
+  function act(code: string, shift: boolean): Action | null {
+    switch (code) {
+      case 'KeyH': {
         const step = facingVector(facing);
         const toX = x + step.x * TUNING.hop.length;
         const toZ = z + step.z * TUNING.hop.length;
@@ -17,16 +18,15 @@ export function startManualKeys(animator: Animator, start: Pose, random: () => n
         z = toZ;
         return hop;
       }
-      case 't':
-      case 'T': {
-        const to = facing + (key === 't' ? 1 : -1);
+      case 'KeyT': {
+        const to = facing + (shift ? -1 : 1);
         const turn = { kind: 'turn', duration: HOP_DURATION, from: facing, to } as const;
         facing = (to + 8) % 8;
         return turn;
       }
-      case 's':
+      case 'KeyS':
         return { kind: 'squawk', duration: TUNING.squawk.duration };
-      case 'l': {
+      case 'KeyL': {
         const { maxYaw, maxRoll, hold } = TUNING.look;
         return {
           kind: 'look',
@@ -42,7 +42,7 @@ export function startManualKeys(animator: Animator, start: Pose, random: () => n
 
   addEventListener('keydown', (event) => {
     if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
-    const action = act(event.key);
+    const action = act(event.code, event.shiftKey);
     if (action) animator.play(action);
   });
 }

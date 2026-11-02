@@ -48,11 +48,20 @@ describe('brain', () => {
       let { x, z, facing } = brain.pose();
       let hops = 0;
       let problem = '';
+      // The current body action, and the frame time of the last look in the current rests.
+      let body: Action | null = null;
+      let lastLook = -Infinity;
+      const isRest = (a: Action | null) => a?.kind === 'idle' && a.duration >= TUNING.rest.min;
       for (let t = 0; t < 600 && !problem;) {
         const dt = nextDt();
         t += dt;
         for (const action of brain.update(dt)) {
           if (!(action.duration > 0)) problem = `${action.kind} with duration ${action.duration}`;
+          if (action.kind !== 'look') {
+            // A rest after a rest keeps the head on its look. Other actions end the looks.
+            if (!(isRest(action) && isRest(body))) lastLook = -Infinity;
+            body = action;
+          }
           if (action.kind === 'hop') {
             hops++;
             const step = facingVector(facing);
@@ -72,8 +81,14 @@ describe('brain', () => {
               problem = `turn from ${action.from} to ${action.to} while facing ${facing}`;
             }
             facing = (action.to + 8) % 8;
-          } else if (action.kind === 'look' && Math.abs(action.yaw) > TUNING.look.maxYaw) {
-            problem = `look yaw ${action.yaw}`;
+          } else if (action.kind === 'look') {
+            if (Math.abs(action.yaw) > TUNING.look.maxYaw) problem = `look yaw ${action.yaw}`;
+            if (!isRest(body)) problem = `look during ${body?.kind ?? 'no action'}`;
+            // The frame times can move each event by up to one step (0.05 s).
+            if (t - lastLook < TUNING.look.hold.min - 0.1) {
+              problem = `look held for only ${(t - lastLook).toFixed(2)} s`;
+            }
+            lastLook = t;
           }
         }
         const pose = brain.pose();
@@ -91,8 +106,14 @@ describe('brain', () => {
     expect(problems).toEqual([]);
   });
 
-  it('gives the same actions for the same seed and the same time steps', () => {
-    expect(run(7, DESKTOP, 120)).toEqual(run(7, DESKTOP, 120));
+  it('gives the same actions for the same seed with different frame times', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const a = run(seed, DESKTOP, 300, 1);
+      const b = run(seed, DESKTOP, 300, 2);
+      // The two runs end at slightly different times, so compare all but the last few actions.
+      const n = Math.min(a.length, b.length) - 3;
+      expect(a.slice(0, n), `seed ${seed}`).toEqual(b.slice(0, n));
+    }
     expect(run(7, DESKTOP, 120)).not.toEqual(run(8, DESKTOP, 120));
   });
 

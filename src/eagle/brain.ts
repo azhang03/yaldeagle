@@ -150,18 +150,29 @@ export function createBrain(random: Random, initialBounds: Bounds, start: Pose):
     const started: Action[] = [];
     bodyLeft -= dt;
     lookLeft -= dt;
-    while (bodyLeft <= 0) {
+    // Handle the events in time order, at their exact times. Then the frame times cannot change
+    // the order of the random numbers, and a seed replays the same moves.
+    while (bodyLeft <= 0 || lookLeft <= 0) {
+      if (lookLeft < bodyLeft) {
+        const action = look();
+        started.push(action);
+        lookLeft += action.duration;
+        continue;
+      }
+      const wasResting = resting;
+      // bodyLeft is 0 or less: the new action started that many seconds ago.
+      const startedAt = bodyLeft;
       const action = decide();
       started.push(action);
       bodyLeft += action.duration;
-      lookLeft = resting ? 0 : Infinity;
-      // The animator turns the head forward for each action that is not a rest.
-      if (!resting) lookYaw = 0;
-    }
-    while (lookLeft <= 0) {
-      const action = look();
-      started.push(action);
-      lookLeft += action.duration;
+      if (!resting) {
+        lookLeft = Infinity;
+        // The animator turns the head forward for each action that is not a rest.
+        lookYaw = 0;
+      } else if (!wasResting) {
+        // The first look starts with the rest. A rest after a rest keeps the current look.
+        lookLeft = startedAt;
+      }
     }
     return started;
   }
