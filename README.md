@@ -64,7 +64,7 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `src/stage/stage.ts`         | Renderer, perspective camera, light over the room, ground, resize, and the frame loop.                                                                                |
 | `src/lib/bounds.ts`          | The `Bounds` rectangle on the ground and its math.                                                                                                                    |
 | `src/lib/room.ts`            | Room coordinates (u to the screen right, v toward the camera) and the fixed room bounds.                                                                              |
-| `src/lib/view.ts`            | Camera views: the overview, the close view of a visit, and the flights between them. Tests: `view.test.ts`.                                                           |
+| `src/lib/view.ts`            | Camera views: the overview with its pan and zoom, the close view of a visit, and the flights between them. Tests: `view.test.ts`.                                     |
 | `src/lib/rng.ts`             | The seeded random source.                                                                                                                                             |
 | `src/lib/ease.ts`            | Easing curves.                                                                                                                                                        |
 | `src/room/areas.ts`          | The four areas of the room and their colors.                                                                                                                          |
@@ -76,7 +76,8 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `src/room/plan.ts`           | The visit planner: the camera direction, the eagle spot, and the items to hide. No Three.js. Tests: `plan.test.ts`.                                                   |
 | `src/room/visit.ts`          | The visit: the jump, the flight down, the gesture, the panel, and the way back. It holds the app mode (wander, going, focus, leaving).                                |
 | `src/room/tooltip.ts`        | The text box at the pointer.                                                                                                                                          |
-| `src/input/pointer.ts`       | Hover, click, and Esc on the canvas.                                                                                                                                  |
+| `src/input/pointer.ts`       | Hover, click, and Esc on the canvas, and touch: pan, pinch, and tap.                                                                                                  |
+| `src/input/gestures.ts`      | Tap, pan, and pinch from touch pointer events. No DOM. Tests: `gestures.test.ts`.                                                                                     |
 | `src/panel/content.ts`       | Turns an item into the panel text. No DOM. Tests: `content.test.ts`.                                                                                                  |
 | `src/panel/build.ts`         | Builds the panel like a steel frame building (blueprint, footings, columns, beams, wall panels), with Web Animations.                                                 |
 | `src/panel/panel.css`        | The panel style.                                                                                                                                                      |
@@ -90,7 +91,7 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `public/`                    | Static files.                                                                                                                                                         |
 | `vite.config.ts`             | Vite and Vitest config.                                                                                                                                               |
 
-Files in `src/lib/`, `src/room/areas.ts`, `src/room/items.ts`, `src/room/plan.ts`, `src/panel/content.ts`, `actions.ts`, and `brain.ts` do not import Three.js or use the DOM, so Vitest can test them without a browser.
+Files in `src/lib/`, `src/room/areas.ts`, `src/room/items.ts`, `src/room/plan.ts`, `src/panel/content.ts`, `src/input/gestures.ts`, `actions.ts`, and `brain.ts` do not import Three.js or use the DOM, so Vitest can test them without a browser.
 
 ## License
 
