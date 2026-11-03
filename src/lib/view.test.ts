@@ -1,6 +1,7 @@
 import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { boundsPoint } from './bounds';
+import { easeInOutCubic } from './ease';
 import { ROOM_AZIMUTH, ROOM_BOUNDS } from './room';
 import {
   cameraPosition,
@@ -87,6 +88,17 @@ describe('flight', () => {
       const turn = view.azimuth - expected.azimuth;
       expect(Math.cos(turn)).toBeCloseTo(1, 9);
     }
+    // On the way down, the elevation starts late. The half height moves on a log scale.
+    const early = flight(from, to, 0.2, down);
+    const k = easeInOutCubic(0.2);
+    expect(early.elevation).toBeCloseTo(
+      down ? from.elevation : from.elevation + (to.elevation - from.elevation) * k,
+      9,
+    );
+    expect(flight(from, to, 0.5, down).halfHeight).toBeCloseTo(
+      Math.sqrt(from.halfHeight * to.halfHeight),
+      9,
+    );
     // The short way: the middle of the flight is within 0.9 rad of the start azimuth.
     expect(Math.abs(flight(from, to, 0.5, down).azimuth - from.azimuth)).toBeLessThan(0.91);
   });
