@@ -48,7 +48,6 @@ const animator = createAnimator(eagle, start);
 
 // ?manual turns the brain off. Keys start each action instead (see manual-keys.ts).
 const brain = params.has('manual') ? null : createBrain(random, ROOM_BOUNDS, obstacles, start);
-if (!brain) startManualKeys(animator, start, random);
 
 const offset = startOffset(stage.aspect());
 
@@ -64,6 +63,7 @@ const visits = createVisits({
   aspect: () => stage.aspect(),
   slow: params.has('slow'),
 });
+if (!brain) startManualKeys(animator, start, random, () => visits.mode() === 'wander');
 
 // A click or a tap counts only in wander and focus.
 const tooltip = createTooltip();
