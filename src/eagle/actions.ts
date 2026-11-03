@@ -30,8 +30,8 @@ export const TUNING = {
     hops: { min: 2, max: 6 },
     /**
      * The chance of each new direction: straight on, one 45° step to a side, or two steps. A
-     * direction counts only if all its hops stay in the bounds. If none of these fit, each
-     * direction that fits has the same chance.
+     * direction counts only if all its hops fit: inside the bounds and outside every obstacle.
+     * If none of these fit, each direction that fits has the same chance.
      */
     turn: { none: 0.6, one: 0.3, two: 0.1 },
     /**
@@ -42,6 +42,19 @@ export const TUNING = {
   },
   /** What the eagle does when it has no goal. */
   weights: { rest: 0.5, squawk: 0.2, wander: 0.3 },
+  /** The actions of a visit. The brain does not choose them. */
+  visit: {
+    /** The time of a quick turn to a free angle. */
+    face: 0.24,
+    /** The height of the small hop in that turn. */
+    faceHop: 0.12,
+    /** A jump takes jumpBase + jumpPerUnit × distance seconds. */
+    jumpBase: 0.55,
+    jumpPerUnit: 0.1,
+    /** The head gestures. */
+    tilt: 0.8,
+    shake: 0.75,
+  },
 } as const;
 
 /** The duration of a hop or a turn. */
@@ -101,7 +114,82 @@ export interface SquawkAction {
   readonly duration: number;
 }
 
-export type BodyAction = IdleAction | HopAction | TurnAction | SquawkAction;
+/** A flap jump from one point to another, over the items. Visits only. */
+export interface JumpAction {
+  readonly kind: 'jump';
+  readonly duration: number;
+  readonly fromX: number;
+  readonly fromZ: number;
+  readonly toX: number;
+  readonly toZ: number;
+}
+
+/**
+ * A quick turn to a free angle with a small hop. Visits only. `from` and `to` are yaw angles in
+ * radians, and `to` is already on the short way from `from`.
+ */
+export interface FaceAction {
+  readonly kind: 'face';
+  readonly duration: number;
+  readonly from: number;
+  readonly to: number;
+}
+
+/** The head tilts and dips, and comes back. Visits only. */
+export interface TiltAction {
+  readonly kind: 'tilt';
+  readonly duration: number;
+}
+
+/** The head shakes "no", smaller each time. Visits only. */
+export interface ShakeAction {
+  readonly kind: 'shake';
+  readonly duration: number;
+}
+
+/** One hop with no move. Visits only. */
+export interface HopInPlaceAction {
+  readonly kind: 'hopInPlace';
+  readonly duration: number;
+}
+
+export type BodyAction =
+  | IdleAction
+  | HopAction
+  | TurnAction
+  | SquawkAction
+  | JumpAction
+  | FaceAction
+  | TiltAction
+  | ShakeAction
+  | HopInPlaceAction;
+
+/** A jump between two points. A longer jump takes more time. */
+export function jumpAction(
+  from: { readonly x: number; readonly z: number },
+  to: { readonly x: number; readonly z: number },
+): JumpAction {
+  const distance = Math.hypot(to.x - from.x, to.z - from.z);
+  const { jumpBase, jumpPerUnit } = TUNING.visit;
+  return {
+    kind: 'jump',
+    duration: jumpBase + jumpPerUnit * distance,
+    fromX: from.x,
+    fromZ: from.z,
+    toX: to.x,
+    toZ: to.z,
+  };
+}
+
+/** A turn from one yaw to another, the short way. */
+export function faceAction(
+  fromYaw: number,
+  toYaw: number,
+  duration = TUNING.visit.face,
+): FaceAction {
+  const to = fromYaw + Math.atan2(Math.sin(toYaw - fromYaw), Math.cos(toYaw - fromYaw));
+  return { kind: 'face', duration, from: fromYaw, to };
+}
 
 /** A head action. It shows only while the body is idle. */
 export interface LookAction {

@@ -1,5 +1,5 @@
 // Plays the actions on the part tree of the eagle. Short hand-written tweens, no library.
-import { easeOutCubic } from '../lib/ease';
+import { easeOutCubic, smoothstep } from '../lib/ease';
 import { facingAngle, TUNING, type Action, type BodyAction, type Pose } from './actions';
 import type { Eagle } from './model';
 
@@ -23,12 +23,36 @@ const MOTION = {
   /** The jaw shakes by this part of its opening, this many radians each second. */
   jawShake: 0.15,
   jawShakeSpeed: 60,
+  /** The jump arc is jumpHeightBase + jumpHeightPerUnit × distance high. */
+  jumpHeightBase: 0.5,
+  jumpHeightPerUnit: 0.12,
+  /** The parts of the jump time: a crouch until jumpCrouch, the air until jumpLand. */
+  jumpCrouch: 0.15,
+  jumpLand: 0.85,
+  jumpSquash: 0.2,
+  jumpStretch: 0.1,
+  jumpLandSquash: 0.16,
+  /** The wings in the jump: flapBase + flapAmp × sin(6πs) radians out. */
+  flapBase: 1.3,
+  flapAmp: 0.5,
+  /** The largest head angles of the gestures (radians). */
+  tiltRoll: 0.35,
+  tiltPitch: 0.15,
+  shakeYaw: 0.45,
 } as const;
 
 export interface Animator {
   /** Starts an action. A body action replaces the current one. */
   play(action: Action): void;
   update(dt: number): void;
+  /** The seconds left in the current body action. 0 if there is none. */
+  bodyLeft(): number;
+  /** An idle body action (a rest or a pause) and its looks end now. Other actions go on. */
+  cutIdle(): void;
+  /** Holds the head turned by this yaw (radians), or null to free it. Looks do not show then. */
+  setGaze(yaw: number | null): void;
+  /** Where the eagle is now, and its yaw in radians. */
+  pose(): { x: number; z: number; yaw: number };
 }
 
 export function createAnimator(eagle: Eagle, start: Pose): Animator {
@@ -40,14 +64,21 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
   let clock = 0;
   let lookYaw = 0;
   let lookRoll = 0;
+  let gaze: number | null = null;
+  // The head angles that snap to their targets. The gestures add to them.
+  let headYaw = 0;
+  let headRoll = 0;
+  let headPitch = 0;
 
   /** Puts the eagle at the end pose of the current body action. */
   function finishBody(): void {
-    if (body?.kind === 'hop') {
+    if (body?.kind === 'hop' || body?.kind === 'jump') {
       x = body.toX;
       z = body.toZ;
     } else if (body?.kind === 'turn') {
       yaw = facingAngle((body.to + 8) % 8);
+    } else if (body?.kind === 'face') {
+      yaw = body.to;
     }
     body = null;
   }
@@ -79,18 +110,23 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
     let squash = 1;
     let pitch = 0;
     let jaw = 0;
+    let wings = 0;
+    // Gesture angles on top of the snapped head angles.
+    let addYaw = 0;
+    let addRoll = 0;
+    let addPitch = 0;
     // The head looks around only while the body is idle or has no action.
-    let headFree = true;
+    const headFree = !body || body.kind === 'idle';
+    const u = body ? Math.min(1, elapsed / body.duration) : 0;
 
-    if (body?.kind === 'hop' || body?.kind === 'turn') {
+    if (body?.kind === 'hop' || body?.kind === 'turn' || body?.kind === 'hopInPlace') {
       const hop = hopShape(elapsed);
       lift = hop.lift;
       squash = hop.squash;
-      headFree = false;
       if (body.kind === 'hop') {
         x = body.fromX + (body.toX - body.fromX) * hop.progress;
         z = body.fromZ + (body.toZ - body.fromZ) * hop.progress;
-      } else {
+      } else if (body.kind === 'turn') {
         const from = facingAngle(body.from);
         yaw = from + (facingAngle(body.to) - from) * easeOutCubic(hop.progress);
       }
@@ -100,7 +136,33 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
       const shake =
         1 - MOTION.jawShake + MOTION.jawShake * Math.sin(elapsed * MOTION.jawShakeSpeed);
       jaw = MOTION.jawOpen * envelope * shake;
-      headFree = false;
+    } else if (body?.kind === 'jump') {
+      const { jumpCrouch: crouch, jumpLand: land } = MOTION;
+      if (u < crouch) {
+        squash = 1 - MOTION.jumpSquash * easeOutCubic(u / crouch);
+      } else if (u > land) {
+        x = body.toX;
+        z = body.toZ;
+        squash =
+          1 - MOTION.jumpLandSquash * Math.sin(Math.PI * Math.min(1, (u - land) / (1 - land)));
+      } else {
+        const s = (u - crouch) / (land - crouch);
+        const k = smoothstep(s);
+        x = body.fromX + (body.toX - body.fromX) * k;
+        z = body.fromZ + (body.toZ - body.fromZ) * k;
+        const distance = Math.hypot(body.toX - body.fromX, body.toZ - body.fromZ);
+        lift = (MOTION.jumpHeightBase + MOTION.jumpHeightPerUnit * distance) * 4 * s * (1 - s);
+        squash = 1 + MOTION.jumpStretch * Math.sin(Math.PI * s);
+        wings = MOTION.flapBase + MOTION.flapAmp * Math.sin(6 * Math.PI * s);
+      }
+    } else if (body?.kind === 'face') {
+      yaw = body.from + (body.to - body.from) * easeOutCubic(u);
+      lift = TUNING.visit.faceHop * 4 * u * (1 - u);
+    } else if (body?.kind === 'tilt') {
+      addRoll = MOTION.tiltRoll * Math.sin(Math.PI * u);
+      addPitch = MOTION.tiltPitch * Math.sin(Math.PI * u);
+    } else if (body?.kind === 'shake') {
+      addYaw = MOTION.shakeYaw * Math.sin(6 * Math.PI * u) * (1 - u);
     }
 
     squash *= 1 + MOTION.breathAmount * Math.sin(clock * MOTION.breathSpeed);
@@ -109,17 +171,34 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
     eagle.root.scale.set(wide, squash, wide);
     eagle.root.position.set(x, lift, z);
     eagle.root.rotation.y = yaw;
+    eagle.wingL.rotation.z = wings;
+    eagle.wingR.rotation.z = -wings;
 
-    const head = eagle.head.rotation;
+    const looks = headFree && gaze === null;
     const snap = Math.min(1, dt * MOTION.headSnap);
-    head.y += ((headFree ? lookYaw : 0) - head.y) * snap;
-    head.z += ((headFree ? lookRoll : 0) - head.z) * snap;
-    head.x += (pitch - head.x) * Math.min(1, dt * MOTION.pitchSnap);
+    headYaw += ((gaze ?? (looks ? lookYaw : 0)) - headYaw) * snap;
+    headRoll += ((looks ? lookRoll : 0) - headRoll) * snap;
+    headPitch += (pitch - headPitch) * Math.min(1, dt * MOTION.pitchSnap);
+    eagle.head.rotation.set(headPitch + addPitch, headYaw + addYaw, headRoll + addRoll);
     eagle.jaw.rotation.x = jaw;
   }
 
   update(0);
-  return { play, update };
+  return {
+    play,
+    update,
+    bodyLeft: () => (body ? Math.max(0, body.duration - elapsed) : 0),
+    cutIdle: () => {
+      if (body?.kind !== 'idle') return;
+      body = null;
+      lookYaw = 0;
+      lookRoll = 0;
+    },
+    setGaze: (next) => {
+      gaze = next;
+    },
+    pose: () => ({ x, z, yaw }),
+  };
 }
 
 /**
