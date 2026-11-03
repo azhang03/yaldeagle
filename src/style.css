@@ -15,3 +15,28 @@ body {
 canvas {
   display: block;
 }
+
+/* The panel host. src/panel/build.ts builds the panel inside it. The right half on a wide screen,
+   the bottom 56% on a tall screen. */
+#panel-host {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 50vw;
+  height: 100%;
+  z-index: 6;
+  pointer-events: none;
+}
+
+#panel-host > * {
+  pointer-events: auto;
+}
+
+@media (max-aspect-ratio: 1/1) {
+  #panel-host {
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    height: 56%;
+  }
+}

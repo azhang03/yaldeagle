@@ -18,13 +18,15 @@ Then open the address that Vite prints.
 
 Options for development. Add them to the address, for example `?bounds&mounts`. They also work on the live site.
 
-| Option    | What it does                                                                                                                                                                                            |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `?seed=N` | Uses the seed N for the random choices. The console shows the seed of each visit. The same seed gives the same moves.                                                                                   |
-| `?manual` | Turns the brain off. Keys start each action: H hop, T turn left, Shift+T turn right, S squawk, L look. Visit actions: J jump 2 units forward, F face a random angle, G gaze on or off, I tilt, N shake. |
-| `?bounds` | Draws the room bounds and one circle for each item on the ground. The eagle stays in the bounds and does not land in a circle.                                                                          |
-| `?mounts` | Shows a dot on each mount point of the eagle (where gear attaches).                                                                                                                                     |
-| `?debug`  | Puts `yaldeagle` in the dev console, with `stage`, `eagle`, `animator`, `brain`, and `exhibits`. Example: `yaldeagle.brain.pose()`                                                                      |
+| Option        | What it does                                                                                                                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `?seed=N`     | Uses the seed N for the random choices. The console shows the seed of each visit. The same seed gives the same moves.                                                                                   |
+| `?manual`     | Turns the brain off. Keys start each action: H hop, T turn left, Shift+T turn right, S squawk, L look. Visit actions: J jump 2 units forward, F face a random angle, G gaze on or off, I tilt, N shake. |
+| `?bounds`     | Draws the room bounds and one circle for each item on the ground. The eagle stays in the bounds and does not land in a circle.                                                                          |
+| `?mounts`     | Shows a dot on each mount point of the eagle (where gear attaches).                                                                                                                                     |
+| `?debug`      | Puts `yaldeagle` in the dev console, with `stage`, `eagle`, `animator`, `brain`, and `exhibits`. Example: `yaldeagle.brain.pose()`                                                                      |
+| `?panel=<id>` | Opens the panel of one item at once, without a visit. The ids are in `src/room/items.ts`, for example `?panel=fe`. Esc or × closes it.                                                                  |
+| `?slow`       | Builds the panel at a quarter of the speed.                                                                                                                                                             |
 
 ## Scripts
 
@@ -56,9 +58,9 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 
 | Path                         | Use                                                                                                                                                                   |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.html`                 | Page shell.                                                                                                                                                           |
+| `index.html`                 | Page shell, with the canvas container and the panel host.                                                                                                             |
 | `src/main.ts`                | Start-up code. It makes the stage, the exhibits, the eagle with its gear, the animator, and the brain, and runs them each frame.                                      |
-| `src/style.css`              | Page style.                                                                                                                                                           |
+| `src/style.css`              | Page style, and the place of the panel host.                                                                                                                          |
 | `src/stage/stage.ts`         | Renderer, perspective camera, light over the room, ground, resize, and the frame loop.                                                                                |
 | `src/lib/bounds.ts`          | The `Bounds` rectangle on the ground and its math.                                                                                                                    |
 | `src/lib/room.ts`            | Room coordinates (u to the screen right, v toward the camera) and the fixed room bounds.                                                                              |
@@ -71,6 +73,9 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `src/room/models.ts`         | The 14 item models, and the parts that the eagle can wear on their own.                                                                                               |
 | `src/room/exhibit.ts`        | One exhibit: the patch, the floor ring, and the floating item with its state look (earned, progress, locked).                                                         |
 | `src/room/gear.ts`           | Puts the earned gear on the eagle mounts.                                                                                                                             |
+| `src/panel/content.ts`       | Turns an item into the panel text. No DOM. Tests: `content.test.ts`.                                                                                                  |
+| `src/panel/build.ts`         | Builds the panel like a steel frame building (blueprint, footings, columns, beams, wall panels), with Web Animations.                                                 |
+| `src/panel/panel.css`        | The panel style.                                                                                                                                                      |
 | `src/eagle/model.ts`         | `buildEagle()`: the eagle from boxes, with its part tree and mount points.                                                                                            |
 | `src/eagle/palette.ts`       | The colors of the eagle.                                                                                                                                              |
 | `src/eagle/mount-markers.ts` | The dots for `?mounts`.                                                                                                                                               |
@@ -81,7 +86,7 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `public/`                    | Static files.                                                                                                                                                         |
 | `vite.config.ts`             | Vite and Vitest config.                                                                                                                                               |
 
-Files in `src/lib/`, `src/room/areas.ts`, `src/room/items.ts`, `actions.ts`, and `brain.ts` do not import Three.js or use the DOM, so Vitest can test them without a browser.
+Files in `src/lib/`, `src/room/areas.ts`, `src/room/items.ts`, `src/panel/content.ts`, `actions.ts`, and `brain.ts` do not import Three.js or use the DOM, so Vitest can test them without a browser.
 
 ## License
 

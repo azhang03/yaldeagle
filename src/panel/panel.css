@@ -1,0 +1,621 @@
+/* The item panel and its steel frame build. build.ts sets --pb-top, --pb-ground, --pb-edge, and --pb-max-w on the root. */
+.pb-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: #2a2a2a;
+  font:
+    15px/1.45 system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.pb-root * {
+  box-sizing: border-box;
+}
+.pb-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.pb-frame {
+  position: absolute;
+  pointer-events: auto;
+}
+.pb-building .pb-frame,
+.pb-building .pb-bp {
+  cursor: pointer;
+}
+.pb-frame.pb-final {
+  left: 0;
+  right: 0;
+  top: var(--pb-top);
+  bottom: var(--pb-ground);
+  margin: auto;
+  height: fit-content;
+  width: min(var(--pb-max-w), calc(100% - 2 * var(--pb-edge)));
+  max-height: calc(100% - var(--pb-top) - var(--pb-ground));
+  display: flex;
+  flex-direction: column;
+}
+.pb-skin {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: #fff;
+  transform-origin: 50% 100%;
+  box-shadow:
+    0 12px 34px rgba(40, 30, 20, 0.14),
+    0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.pb-scroll {
+  border-radius: 10px;
+}
+.pb-building .pb-scroll {
+  position: absolute;
+  inset: 0;
+}
+.pb-final .pb-scroll {
+  position: relative;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pb-stage {
+  position: relative;
+  transform-origin: 0 0;
+}
+.pb-floor {
+  position: relative;
+  padding: 10px 24px 8px;
+  background: #fff;
+  transform-origin: 50% 0;
+}
+.pb-roof {
+  padding: 18px 48px 8px 24px;
+  border-top: 5px solid var(--area);
+  border-radius: 10px 10px 0 0;
+}
+.pb-floor:last-child {
+  padding-bottom: 24px;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+.pb-slab {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: #cfc6b8;
+}
+.pb-area {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #fff;
+  background: var(--area);
+}
+.pb-item {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: #888;
+}
+.pb-title {
+  margin: 2px 0 8px;
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #1f1f1f;
+}
+.pb-status {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 10px;
+}
+.pb-status.earned {
+  background: #e4f4e1;
+  color: #2f7a28;
+}
+.pb-status.progress {
+  background: #fdf0d3;
+  color: #9a6a00;
+}
+.pb-status.locked {
+  background: #2b2622;
+  color: #fff;
+}
+.pb-lead {
+  margin: 10px 0 0;
+  font-style: italic;
+  color: #555;
+}
+.pb-confirm {
+  margin: 12px 0 0;
+  background: #fff6d6;
+  border-left: 3px solid #e8b923;
+  padding: 6px 9px;
+  font-size: 13.5px;
+  color: #5a4a10;
+}
+.pb-floor h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 6px 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+}
+.pb-floor h3::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--area);
+}
+.pb-sec {
+  font-size: 14.5px;
+}
+.pb-sec p,
+.pb-sec ul {
+  margin: 0;
+}
+.pb-sec ul {
+  padding-left: 18px;
+}
+.pb-sec .stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.pb-sec .stats div {
+  background: #f4f4f6;
+  border-radius: 6px;
+  padding: 6px;
+  text-align: center;
+}
+.pb-sec .stats b {
+  display: block;
+  font-size: 18px;
+}
+.pb-sec .stats span {
+  font-size: 12px;
+  color: #888;
+}
+.pb-sec .stats + .small {
+  margin-top: 0;
+}
+.pb-sec .small,
+.pb-small {
+  font-size: 12px;
+  color: #888;
+  margin: 4px 0 0;
+}
+.pb-try {
+  margin-top: 14px;
+  font: inherit;
+  font-size: 14px;
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1.5px dashed #bbb;
+  background: #fafafa;
+  color: #999;
+}
+.pb-close {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  font:
+    22px/1 system-ui,
+    sans-serif;
+  color: #999;
+  cursor: pointer;
+}
+.pb-close:hover {
+  color: #333;
+}
+.pb-building .pb-close {
+  pointer-events: none;
+}
+.pb-glitch {
+  display: inline-block;
+  animation: pb-glitch 2.4s infinite steps(1);
+}
+@keyframes pb-glitch {
+  0%,
+  84%,
+  100% {
+    text-shadow: none;
+    transform: none;
+  }
+  86% {
+    text-shadow:
+      2px 0 #00d8ff,
+      -2px 0 #ff3bd4;
+    transform: translateX(1px);
+  }
+  90% {
+    text-shadow:
+      -2px 0 #00d8ff,
+      2px 0 #ff3bd4;
+    transform: translateX(-2px) skewX(-8deg);
+  }
+  94% {
+    text-shadow:
+      1px 0 #00d8ff,
+      -1px 0 #ff3bd4;
+    transform: none;
+  }
+}
+
+/* Locked: a construction hoarding of plywood with caution tape. */
+.pb-locked .pb-skin {
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, rgba(90, 55, 20, 0.25) 0 2px, transparent 2px) 0 0/33.34% 100%,
+    repeating-linear-gradient(
+      93deg,
+      rgba(150, 100, 40, 0.08) 0 2px,
+      transparent 2px 7px,
+      rgba(150, 100, 40, 0.05) 7px 8px,
+      transparent 8px 15px
+    ),
+    linear-gradient(#e3c28c, #d3ab70);
+  box-shadow:
+    0 10px 26px rgba(60, 40, 10, 0.22),
+    inset 0 0 0 1px rgba(90, 55, 20, 0.3);
+}
+.pb-tape {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background: repeating-linear-gradient(-45deg, #f6c500 0 9px, #26221e 9px 18px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.pb-tape.t {
+  top: 0;
+  border-radius: 4px 4px 0 0;
+}
+.pb-tape.b {
+  bottom: 0;
+  border-radius: 0 0 4px 4px;
+}
+.pb-locked .pb-scroll {
+  border-radius: 4px;
+}
+.pb-locked .pb-floor {
+  background: transparent;
+  color: #3a2915;
+}
+.pb-locked .pb-roof {
+  border-top: 0;
+  padding-top: 26px;
+}
+.pb-locked .pb-floor:last-child {
+  padding-bottom: 30px;
+}
+.pb-locked .pb-floor h3,
+.pb-locked .pb-item {
+  color: #6b4a22;
+}
+.pb-locked .pb-lead {
+  color: #4a3519;
+}
+.pb-locked .pb-title {
+  color: #2e2010;
+}
+.pb-locked .pb-sec .small,
+.pb-locked .pb-small {
+  color: #6b5030;
+}
+.pb-locked .pb-confirm {
+  transform: rotate(-0.8deg);
+  box-shadow: 0 2px 4px rgba(60, 40, 10, 0.25);
+}
+.pb-locked .pb-try {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: #8a6a40;
+  color: #6b5030;
+}
+.pb-locked .pb-close {
+  top: 18px;
+  right: 10px;
+  background: #fff;
+  color: #555;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Blueprint */
+.pb-bp {
+  position: absolute;
+  pointer-events: auto;
+}
+.pb-sheet {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background-color: #1f4e8c;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.24) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.24) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size:
+    50px 50px,
+    50px 50px,
+    10px 10px,
+    10px 10px;
+  box-shadow: 0 6px 18px rgba(20, 40, 80, 0.25);
+}
+.pb-sheet svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+}
+.pb-sheet path {
+  fill: none;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pb-roll {
+  position: absolute;
+  left: -5px;
+  right: -5px;
+  top: -6px;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(#6a92cc, #1d4a85 55%, #11305a);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* Concrete */
+.pb-found,
+.pb-pad {
+  position: absolute;
+  top: 100%;
+  height: 14px;
+  border-radius: 2px 2px 4px 4px;
+  transform-origin: 50% 100%;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(0, 0, 0, 0.09) 1px, transparent 1.6px) 0 0/9px 7px,
+    radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.3) 1px, transparent 1.6px) 0 0/11px 6px,
+    linear-gradient(#cec6b9, #aca496);
+  box-shadow: 0 3px 0 #948c7f;
+}
+.pb-found {
+  left: -12px;
+  right: -12px;
+}
+.pb-pad {
+  width: 28px;
+  margin-left: -14px;
+}
+.pb-pour {
+  position: absolute;
+  width: 8px;
+  margin-left: -4px;
+  height: 48px;
+  border-radius: 4px;
+  transform-origin: 50% 0;
+  background: linear-gradient(90deg, #b3ab9e, #cfc8bc 50%, #a9a193);
+}
+
+/* Scaffolding */
+.pb-scaf {
+  position: absolute;
+  left: -24px;
+  right: -24px;
+  top: 0;
+  bottom: 0;
+}
+.pb-tower {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+}
+.pb-tower.l {
+  left: 0;
+}
+.pb-tower.r {
+  right: 0;
+}
+.pb-lvl {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+.pb-lvl-in,
+.pb-jack {
+  position: absolute;
+  inset: 0;
+  border-left: 3px solid #7f8a96;
+  border-right: 3px solid #7f8a96;
+  transform-origin: 50% 100%;
+}
+.pb-jack {
+  inset: auto 0 -14px 0;
+  height: 14px;
+}
+.pb-jack::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 1px;
+  background: #6f7882;
+}
+.pb-root svg.pb-x {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.pb-x line {
+  stroke: #97a1ac;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.pb-plank {
+  position: absolute;
+  top: -3px;
+  height: 5px;
+  border-radius: 1px;
+  background: #f0b429;
+  box-shadow: 0 1px 0 #b57d12;
+}
+.l .pb-plank {
+  left: -3px;
+  right: -11px;
+}
+.r .pb-plank {
+  left: -11px;
+  right: -3px;
+}
+.pb-ledger {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  margin-top: -1px;
+  background: #97a1ac;
+}
+
+/* The part of the scaffold that stays when the item is in progress */
+.pb-rig {
+  position: absolute;
+  bottom: 100%;
+  right: 22px;
+  width: 100px;
+  height: 36px;
+  transform-origin: 50% 100%;
+}
+.pb-rig i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #7f8a96;
+}
+.pb-rig b {
+  position: absolute;
+  left: -5px;
+  right: -5px;
+  top: 0;
+  height: 5px;
+  border-radius: 1px;
+  background: #f0b429;
+  box-shadow: 0 1px 0 #b57d12;
+}
+.pb-sign {
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 82px;
+  margin-left: -41px;
+  padding: 2px 0;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #26221e;
+  background: #ffd21f;
+  border: 1.5px solid #26221e;
+  border-radius: 3px;
+  transform-origin: 50% -6px;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Steel */
+.pb-steel {
+  position: absolute;
+  inset: 0;
+}
+.pb-col {
+  position: absolute;
+  top: -6px;
+  bottom: 0;
+  width: 8px;
+  margin-left: -4px;
+  transform-origin: 50% 100%;
+  background: linear-gradient(90deg, #4a5664 0 2px, #7e8c9b 2px 6px, #4a5664 6px);
+}
+.pb-beam {
+  position: absolute;
+  left: -5px;
+  right: -5px;
+  height: 7px;
+  margin-top: -3px;
+  border-radius: 1px;
+  background: linear-gradient(#4a5664 0 2px, #7e8c9b 2px 5px, #4a5664 5px);
+}
+.pb-rivet {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: #dde3ea;
+  box-shadow: 0 0 0 1px #3d4652;
+}
+.pb-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pb-shine i {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(
+    105deg,
+    transparent 12%,
+    rgba(120, 175, 245, 0.28) 30%,
+    rgba(140, 190, 255, 0.55) 44%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(140, 190, 255, 0.55) 56%,
+    transparent 62%,
+    transparent 70%,
+    rgba(140, 190, 255, 0.4) 74%,
+    transparent 78%
+  );
+}
+
+/* Dust */
+.pb-dust {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: #d8d0c3;
+}
