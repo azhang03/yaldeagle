@@ -8,6 +8,8 @@ import { addMountMarkers } from './eagle/mount-markers';
 import { createRandom } from './lib/rng';
 import { ROOM_BOUNDS, roomPoint } from './lib/room';
 import { overview, startOffset } from './lib/view';
+import { buildPanel } from './panel/build';
+import { panelContent } from './panel/content';
 import { createExhibit } from './room/exhibit';
 import { addGear } from './room/gear';
 import { ITEM_CLEARANCE, ITEMS } from './room/items';
@@ -50,6 +52,27 @@ const offset = startOffset(stage.aspect());
 // With ?debug, the dev console can reach these objects as `yaldeagle`.
 if (params.has('debug')) {
   Reflect.set(window, 'yaldeagle', { stage, eagle, animator, brain, exhibits });
+}
+
+const host = document.querySelector<HTMLElement>('#panel-host');
+if (!host) throw new Error('The page has no #panel-host element.');
+
+// ?panel=<id> opens the panel of one item at once, without a visit. Esc or × closes it.
+const panelId = params.get('panel');
+if (panelId !== null) {
+  const item = ITEMS.find((it) => it.id === panelId);
+  if (item) {
+    const close = (): void => void panel.demolish();
+    const panel = buildPanel(host, panelContent(item), {
+      speed: params.has('slow') ? 0.25 : 1,
+      onClose: close,
+    });
+    addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') close();
+    });
+  } else {
+    console.warn(`Unknown item "${panelId}" in ?panel.`);
+  }
 }
 
 stage.start((dt) => {
