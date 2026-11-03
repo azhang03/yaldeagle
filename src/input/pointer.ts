@@ -57,10 +57,8 @@ export function attachPointer(
   }
 
   /** A click or a tap at the screen point (x, y). */
-  function press(x: number, y: number, touch: boolean): void {
+  function press(x: number, y: number): void {
     const exhibit = pick(x, y);
-    // A tap on a touch screen shows the state, as a hover does with a mouse.
-    if (touch && exhibit && handlers.canHover()) tooltip.show(exhibit.item, x, y);
     if (exhibit) handlers.open(exhibit.item.id);
     else handlers.floor();
   }
@@ -75,7 +73,7 @@ export function attachPointer(
     zoom: (x, y, factor) => handlers.zoom(x, y, factor),
     tap: (x, y) => {
       const rect = canvas.getBoundingClientRect();
-      press(x + rect.left, y + rect.top, true);
+      press(x + rect.left, y + rect.top);
     },
   });
 
@@ -115,7 +113,7 @@ export function attachPointer(
     const start = down;
     down = null;
     if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > CLICK_SLOP) return;
-    press(event.clientX, event.clientY, false);
+    press(event.clientX, event.clientY);
   });
 
   canvas.addEventListener('pointercancel', (event) => {
