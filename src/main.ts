@@ -5,6 +5,7 @@ import { createBrain } from './eagle/brain';
 import { startManualKeys } from './eagle/manual-keys';
 import { buildEagle } from './eagle/model';
 import { addMountMarkers } from './eagle/mount-markers';
+import { attachPointer } from './input/pointer';
 import { createRandom } from './lib/rng';
 import { ROOM_BOUNDS, roomPoint } from './lib/room';
 import { overview, startOffset } from './lib/view';
@@ -13,6 +14,7 @@ import { panelContent } from './panel/content';
 import { createExhibit } from './room/exhibit';
 import { addGear } from './room/gear';
 import { ITEM_CLEARANCE, ITEMS } from './room/items';
+import { createTooltip } from './room/tooltip';
 import { createStage } from './stage/stage';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -74,6 +76,13 @@ if (panelId !== null) {
     console.warn(`Unknown item "${panelId}" in ?panel.`);
   }
 }
+
+// Hover and the tooltip. A click starts a visit after the visit batch.
+attachPointer(stage.canvas, stage.camera, exhibits, createTooltip(), {
+  open: () => undefined,
+  floor: () => undefined,
+  canHover: () => true,
+});
 
 stage.start((dt) => {
   if (brain) for (const action of brain.update(dt)) animator.play(action);
