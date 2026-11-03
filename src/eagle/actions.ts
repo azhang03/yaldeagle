@@ -44,8 +44,9 @@ export const TUNING = {
   weights: { rest: 0.5, squawk: 0.2, wander: 0.3 },
   /** The actions of a visit. The brain does not choose them. */
   visit: {
-    /** A quick turn to a free angle, with a small hop of this height. */
+    /** The time of a quick turn to a free angle. */
     face: 0.24,
+    /** The height of the small hop in that turn. */
     faceHop: 0.12,
     /** A jump takes jumpBase + jumpPerUnit × distance seconds. */
     jumpBase: 0.55,

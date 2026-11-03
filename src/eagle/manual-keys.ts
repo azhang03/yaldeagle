@@ -1,6 +1,7 @@
 // Keys that start each action by hand, for development: H hop, T turn left, Shift+T turn right,
 // S squawk, L look, and the visit actions: J jump 2 units forward, F face a random angle, G gaze
-// on or off, I tilt, N shake. The keys do not check the bounds or the items.
+// on or off, I tilt, N shake. The keys do not check the bounds or the items. After F, H and T go
+// on from the 45° step nearest to the yaw, so T can snap the yaw to that step.
 import {
   faceAction,
   facingAngle,
