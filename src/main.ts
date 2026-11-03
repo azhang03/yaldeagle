@@ -8,7 +8,7 @@ import { addMountMarkers } from './eagle/mount-markers';
 import { attachPointer } from './input/pointer';
 import { createRandom } from './lib/rng';
 import { ROOM_BOUNDS, roomPoint } from './lib/room';
-import { startOffset } from './lib/view';
+import { clampOffset, panBy, startOffset, zoomAt } from './lib/view';
 import { buildPanel } from './panel/build';
 import { panelContent } from './panel/content';
 import { createExhibit } from './room/exhibit';
@@ -81,6 +81,15 @@ attachPointer(stage.canvas, stage.camera, exhibits, tooltip, {
     tooltip.hide();
   },
   canHover: canAct,
+  // Touch pan and zoom move the overview, in wander only.
+  pan: (dx, dy) => {
+    if (visits.mode() === 'wander') panBy(offset, dx, dy, stage.viewport(), stage.aspect());
+  },
+  zoom: (x, y, factor) => {
+    if (visits.mode() === 'wander') {
+      zoomAt(offset, x, y, factor, stage.viewport(), stage.aspect());
+    }
+  },
 });
 
 // With ?debug, the dev console can reach these objects as `yaldeagle`.
@@ -115,5 +124,7 @@ stage.start((dt) => {
   animator.update(dt);
   for (const exhibit of exhibits) exhibit.update(dt);
   gear.update(dt);
+  // A resize can change the limits of the offset.
+  clampOffset(offset, stage.aspect());
   stage.setView(visits.view());
 });

@@ -72,9 +72,73 @@ export function overview(aspect: number, o: OverviewOffset): CameraView {
   };
 }
 
-/** The overview offset at the start. */
-export function startOffset(_aspect: number): OverviewOffset {
-  return { u: 0.5, v: -0.5, zoom: 1 };
+/** The limits of the overview offset: the center stays in the room bounds. */
+const OFFSET_LIMITS = { u0: -7, u1: 7.8, v0: -7.2, v1: 5.8 } as const;
+
+const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
+
+/**
+ * Moves the offset back inside its limits. The zoom shows at most the whole room (1) and at least
+ * the smallest half height.
+ */
+export function clampOffset(o: OverviewOffset, aspect: number): void {
+  o.zoom = clamp(o.zoom, OVERVIEW.minHalfHeight / fitHalfHeight(aspect), 1);
+  o.u = clamp(o.u, OFFSET_LIMITS.u0, OFFSET_LIMITS.u1);
+  o.v = clamp(o.v, OFFSET_LIMITS.v0, OFFSET_LIMITS.v1);
+}
+
+/**
+ * The overview offset at the start. A tall screen starts closer, so the items are big enough to
+ * tap.
+ */
+export function startOffset(aspect: number): OverviewOffset {
+  if (aspect >= 1) return { u: 0.5, v: -0.5, zoom: 1 };
+  const o = { u: 0.5, v: 0, zoom: 3.8 / aspect / fitHalfHeight(aspect) };
+  clampOffset(o, aspect);
+  return o;
+}
+
+export interface Viewport {
+  readonly width: number;
+  readonly height: number;
+}
+
+/** The world units for one screen pixel at the target. The overview is almost flat. */
+function unitsPerPixel(o: OverviewOffset, viewport: Viewport, aspect: number): number {
+  return (2 * overview(aspect, o).halfHeight) / viewport.height;
+}
+
+/** Pans the overview by (dx, dy) screen pixels, so the floor follows the finger. */
+export function panBy(
+  o: OverviewOffset,
+  dx: number,
+  dy: number,
+  viewport: Viewport,
+  aspect: number,
+): void {
+  const k = unitsPerPixel(o, viewport, aspect);
+  o.u -= dx * k;
+  // The floor is seen at a slant, so a pixel up the screen is a longer step on the floor.
+  o.v -= (dy * k) / Math.sin(OVERVIEW.elevation);
+  clampOffset(o, aspect);
+}
+
+/** Zooms by the factor (above 1 zooms out) and keeps the floor point under (x, y) in place. */
+export function zoomAt(
+  o: OverviewOffset,
+  x: number,
+  y: number,
+  factor: number,
+  viewport: Viewport,
+  aspect: number,
+): void {
+  const k0 = unitsPerPixel(o, viewport, aspect);
+  o.zoom *= factor;
+  clampOffset(o, aspect);
+  const k1 = unitsPerPixel(o, viewport, aspect);
+  o.u += (x - viewport.width / 2) * (k0 - k1);
+  o.v += ((y - viewport.height / 2) * (k0 - k1)) / Math.sin(OVERVIEW.elevation);
+  clampOffset(o, aspect);
 }
 
 /**

@@ -11,9 +11,11 @@ body {
   overflow: hidden;
 }
 
-/* An inline canvas adds a gap under it, and the gap makes a scroll bar. */
+/* An inline canvas adds a gap under it, and the gap makes a scroll bar. With touch-action none, a
+   finger on the canvas pans and zooms the room, not the page. */
 canvas {
   display: block;
+  touch-action: none;
 }
 
 /* The panel host. src/panel/build.ts builds the panel inside it. The right half on a wide screen,
