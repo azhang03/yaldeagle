@@ -3,14 +3,21 @@ import { describe, expect, it } from 'vitest';
 import { boundsPoint } from './bounds';
 import { easeInOutCubic } from './ease';
 import { ROOM_AZIMUTH, ROOM_BOUNDS } from './room';
+import { createRandom } from './rng';
 import {
   cameraPosition,
+  clampOffset,
   CLOSE,
   closeView,
+  fitHalfHeight,
   flight,
   nearFar,
   overview,
+  OVERVIEW,
+  panBy,
+  zoomAt,
   type CameraView,
+  type OverviewOffset,
 } from './view';
 
 /** A three camera at the view, the same way as the stage places it. */
@@ -101,5 +108,57 @@ describe('flight', () => {
     );
     // The short way: the middle of the flight is within 0.9 rad of the start azimuth.
     expect(Math.abs(flight(from, to, 0.5, down).azimuth - from.azimuth)).toBeLessThan(0.91);
+  });
+});
+
+describe('overview pan and zoom', () => {
+  const viewport = { width: 1280, height: 800 };
+  const aspect = 1.6;
+  const sin = Math.sin(OVERVIEW.elevation);
+  /** The room point (u, v) under the screen point (x, y). */
+  const under = (o: OverviewOffset, x: number, y: number) => {
+    const k = (2 * overview(aspect, o).halfHeight) / viewport.height;
+    return {
+      u: o.u + (x - viewport.width / 2) * k,
+      v: o.v + ((y - viewport.height / 2) * k) / sin,
+    };
+  };
+
+  it('keeps the floor point under the fingers in place while it zooms', () => {
+    for (const factor of [0.9, 1.1]) {
+      const o = { u: 0, v: -1, zoom: 0.7 };
+      const before = under(o, 900, 300);
+      zoomAt(o, 900, 300, factor, viewport, aspect);
+      expect(o.zoom).toBeCloseTo(0.7 * factor, 12);
+      const after = under(o, 900, 300);
+      expect(after.u).toBeCloseTo(before.u, 9);
+      expect(after.v).toBeCloseTo(before.v, 9);
+    }
+  });
+
+  it('keeps the offset inside its limits after random pans and zooms', () => {
+    for (const a of [1.6, 0.46]) {
+      const random = createRandom(3);
+      const o = { u: 0.5, v: -0.5, zoom: 1 };
+      for (let i = 0; i < 200; i++) {
+        if (random() < 0.5) {
+          panBy(o, (random() - 0.5) * 2000, (random() - 0.5) * 2000, viewport, a);
+        } else {
+          zoomAt(o, random() * 1280, random() * 800, 0.3 + random() * 1.5, viewport, a);
+        }
+        expect(o.zoom).toBeGreaterThanOrEqual(OVERVIEW.minHalfHeight / fitHalfHeight(a) - 1e-12);
+        expect(o.zoom).toBeLessThanOrEqual(1);
+        expect(o.u).toBeGreaterThanOrEqual(-7);
+        expect(o.u).toBeLessThanOrEqual(7.8);
+        expect(o.v).toBeGreaterThanOrEqual(-7.2);
+        expect(o.v).toBeLessThanOrEqual(5.8);
+      }
+    }
+  });
+
+  it('moves an offset back inside its limits', () => {
+    const o = { u: 20, v: -20, zoom: 5 };
+    clampOffset(o, aspect);
+    expect(o).toEqual({ u: 7.8, v: -7.2, zoom: 1 });
   });
 });
