@@ -1,4 +1,4 @@
-// The empty white space: renderer, camera, light, ground, resize, and the frame loop.
+// The white room: renderer, camera, light, ground, resize, and the frame loop.
 import {
   BufferAttribute,
   BufferGeometry,
@@ -9,46 +9,44 @@ import {
   LineLoop,
   MathUtils,
   Mesh,
-  OrthographicCamera,
   PCFShadowMap,
+  PerspectiveCamera,
   PlaneGeometry,
   Scene,
   ShadowMaterial,
   Timer,
-  Vector3,
   WebGLRenderer,
 } from 'three';
-import { boundsPoint, viewBounds, type Bounds, type Margin } from '../lib/bounds';
+import { boundsPoint, type Bounds } from '../lib/bounds';
+import { cameraPosition, nearFar, type CameraView } from '../lib/view';
 
-const AZIMUTH = MathUtils.degToRad(30);
-const ELEVATION = MathUtils.degToRad(38);
-/** Half the view height in world units on a wide screen. */
-const HALF_HEIGHT = 3;
-/** Half the view width does not go below this. A narrow screen shows more height instead. */
-const MIN_HALF_WIDTH = 2.5;
-/**
- * Keeps the full eagle on the screen when its feet are on the bounds edge. The top margin is
- * larger because the body is above the feet (about 1.4 units tall, plus the hop).
- */
-const MARGIN: Margin = { side: 0.8, top: 2, bottom: 0.6 };
-/** The sun position relative to the point that it follows. */
-const SUN_OFFSET = new Vector3(-3, 10, 5);
-/** Half the size of the shadow camera. The shadow is sharp only inside it. */
-const SHADOW_HALF = 4;
+/** Half the size of the shadow camera. It covers the whole room. */
+const SHADOW_HALF = 13;
 /** The largest time step for one frame, in seconds. */
 const MAX_DT = 0.05;
 
+/** A circle on the ground, for the development outline. */
+export interface OutlineCircle {
+  readonly x: number;
+  readonly z: number;
+  readonly radius: number;
+}
+
 export interface StageOptions {
-  /** Draws the outline of the bounds on the ground. */
-  readonly showBounds: boolean;
+  /** Draws the bounds and the circles on the ground, for development. Null draws nothing. */
+  readonly outline: { bounds: Bounds; circles: readonly OutlineCircle[] } | null;
 }
 
 export interface Stage {
   readonly scene: Scene;
-  /** The ground rectangle that the eagle can use. It changes when the window size changes. */
-  bounds(): Bounds;
-  /** Moves the sun and its shadow camera to the ground point (x, z). */
-  follow(x: number, z: number): void;
+  readonly camera: PerspectiveCamera;
+  readonly canvas: HTMLCanvasElement;
+  /** Places the camera at the view. */
+  setView(view: CameraView): void;
+  /** The container width divided by its height. */
+  aspect(): number;
+  /** The container size in CSS pixels. */
+  viewport(): { width: number; height: number };
   /** Starts the frame loop. Each frame calls `update` with the time step in seconds. */
   start(update: (dt: number) => void): void;
 }
@@ -57,22 +55,26 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
   const renderer = new WebGLRenderer({ antialias: true });
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFShadowMap;
+  // Clipping planes cut the items that are in progress.
+  renderer.localClippingEnabled = true;
   container.appendChild(renderer.domElement);
 
   const scene = new Scene();
   scene.background = new Color('#ffffff');
   scene.add(new HemisphereLight('#ffffff', '#b8b0a2', 1.85));
 
+  // The sun stays over the room, so its shadow camera covers the whole room.
   const sun = new DirectionalLight('#ffffff', 1.35);
+  sun.position.set(-3, 10, 5);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, {
     left: -SHADOW_HALF,
     right: SHADOW_HALF,
     top: SHADOW_HALF,
     bottom: -SHADOW_HALF,
     near: 1,
-    far: 30,
+    far: 40,
   });
   sun.shadow.radius = 3;
   sun.shadow.bias = -0.0004;
@@ -85,41 +87,33 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
   ground.receiveShadow = true;
   scene.add(ground);
 
-  // The camera looks at the ground origin and does not move.
-  const camera = new OrthographicCamera();
-  const distance = 30;
-  camera.position.set(
-    distance * Math.cos(ELEVATION) * Math.sin(AZIMUTH),
-    distance * Math.sin(ELEVATION),
-    distance * Math.cos(ELEVATION) * Math.cos(AZIMUTH),
-  );
-  camera.lookAt(0, 0, 0);
-  camera.near = 0.1;
-  camera.far = 100;
+  const camera = new PerspectiveCamera();
+  if (options.outline) scene.add(createOutline(options.outline.bounds, options.outline.circles));
 
-  const outline = options.showBounds ? createOutline() : null;
-  if (outline) scene.add(outline.line);
+  let width = 1;
+  let height = 1;
+  let lastView: CameraView | null = null;
 
-  let bounds: Bounds;
+  function setView(view: CameraView): void {
+    lastView = view;
+    const p = cameraPosition(view);
+    camera.position.set(p.x, p.y, p.z);
+    camera.lookAt(view.target.x, view.target.y, view.target.z);
+    const { near, far } = nearFar(view);
+    camera.fov = view.fov;
+    camera.aspect = width / height;
+    camera.near = near;
+    camera.far = far;
+    camera.updateProjectionMatrix();
+  }
+
   function resize(): void {
     // A hidden container has size 0. Use 1 so that the aspect stays finite.
-    const width = Math.max(1, container.clientWidth);
-    const height = Math.max(1, container.clientHeight);
+    width = Math.max(1, container.clientWidth);
+    height = Math.max(1, container.clientHeight);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(width, height);
-    const aspect = width / height;
-    const halfHeight = Math.max(HALF_HEIGHT, MIN_HALF_WIDTH / aspect);
-    const halfWidth = halfHeight * aspect;
-    camera.left = -halfWidth;
-    camera.right = halfWidth;
-    camera.top = halfHeight;
-    camera.bottom = -halfHeight;
-    camera.updateProjectionMatrix();
-    bounds = viewBounds(
-      { x: 0, z: 0, azimuth: AZIMUTH, elevation: ELEVATION, halfWidth, halfHeight },
-      MARGIN,
-    );
-    outline?.update(bounds);
+    if (lastView) setView(lastView);
     // setSize clears the canvas after the frame was drawn. Draw again, so a resize does not
     // show a blank frame.
     renderer.render(scene, camera);
@@ -141,12 +135,6 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
   }
   watchPixelRatio();
 
-  function follow(x: number, z: number): void {
-    sun.target.position.set(x, 0, z);
-    sun.position.set(x, 0, z).add(SUN_OFFSET);
-  }
-  follow(0, 0);
-
   function start(update: (dt: number) => void): void {
     const timer = new Timer();
     // With the document connected, the timer ignores the time while the tab is hidden.
@@ -159,30 +147,52 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
     });
   }
 
-  return { scene, bounds: () => bounds, follow, start };
+  return {
+    scene,
+    camera,
+    canvas: renderer.domElement,
+    setView,
+    aspect: () => width / height,
+    viewport: () => ({ width, height }),
+    start,
+  };
 }
 
-/** A line on the ground around the bounds, for development. */
-function createOutline(): { line: LineLoop; update(bounds: Bounds): void } {
-  const positions = new BufferAttribute(new Float32Array(4 * 3), 3);
-  const geometry = new BufferGeometry().setAttribute('position', positions);
-  const line = new LineLoop(geometry, new LineBasicMaterial({ color: '#e0457b' }));
+/** Lines on the ground around the bounds and around each circle, for development. */
+function createOutline(bounds: Bounds, circles: readonly OutlineCircle[]): LineLoop {
+  const material = new LineBasicMaterial({ color: '#e0457b' });
+  // Above the patches and the floor rings, so they do not hide the lines.
+  const y = 0.03;
   const corners = [
     [-1, -1],
     [1, -1],
     [1, 1],
     [-1, 1],
   ] as const;
-  return {
-    line,
-    update(bounds) {
-      corners.forEach(([su, sv], i) => {
+  const box = new LineLoop(
+    loopGeometry(
+      corners.map(([su, sv]) => {
         const p = boundsPoint(bounds, su * bounds.halfU, sv * bounds.halfV);
-        // Slightly above the ground, so the ground does not hide the line.
-        positions.setXYZ(i, p.x, 0.01, p.z);
-      });
-      positions.needsUpdate = true;
-      geometry.computeBoundingSphere();
-    },
-  };
+        return [p.x, y, p.z];
+      }),
+    ),
+    material,
+  );
+  const segments = 48;
+  for (const c of circles) {
+    const points: [number, number, number][] = [];
+    for (let i = 0; i < segments; i++) {
+      const a = (i / segments) * 2 * Math.PI;
+      points.push([c.x + c.radius * Math.cos(a), y, c.z + c.radius * Math.sin(a)]);
+    }
+    box.add(new LineLoop(loopGeometry(points), material));
+  }
+  return box;
+}
+
+function loopGeometry(points: readonly (readonly [number, number, number])[]): BufferGeometry {
+  return new BufferGeometry().setAttribute(
+    'position',
+    new BufferAttribute(new Float32Array(points.flat()), 3),
+  );
 }

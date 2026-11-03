@@ -1,17 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { boundsContains, viewBounds, type Bounds } from '../lib/bounds';
+import { boundsContains, type Bounds } from '../lib/bounds';
 import { createRandom } from '../lib/rng';
+import { ROOM_BOUNDS } from '../lib/room';
 import { facingVector, TUNING, type Action } from './actions';
 import { createBrain } from './brain';
 
-// Bounds like the ones the stage makes: camera azimuth 30°, elevation 38°.
-const AZIMUTH = Math.PI / 6;
-const ELEVATION = (38 * Math.PI) / 180;
-const MARGIN = { side: 0.8, top: 2, bottom: 0.6 };
-const view = (halfWidth: number, halfHeight: number) =>
-  viewBounds({ x: 0, z: 0, azimuth: AZIMUTH, elevation: ELEVATION, halfWidth, halfHeight }, MARGIN);
-const DESKTOP = view(4.5, 3);
-const PHONE = view(2.5, 5.41);
+// The room bounds, and small bounds that leave few lines that fit.
+const SMALL: Bounds = { ...ROOM_BOUNDS, halfU: 2, halfV: 3 };
 
 /** Time steps from 0.005 to 0.05 s, from their own seed, like a real frame loop. */
 function steps(seed: number): () => number {
@@ -38,7 +33,7 @@ describe('brain', () => {
     // problem.
     const problems: string[] = [];
     for (let seed = 1; seed <= 50; seed++) {
-      const bounds = seed % 2 ? DESKTOP : PHONE;
+      const bounds = seed % 2 ? ROOM_BOUNDS : SMALL;
       const brain = createBrain(createRandom(seed), bounds, {
         x: bounds.x,
         z: bounds.z,
@@ -109,20 +104,20 @@ describe('brain', () => {
 
   it('gives the same actions for the same seed with different frame times', () => {
     for (let seed = 1; seed <= 10; seed++) {
-      const a = run(seed, DESKTOP, 300, 1);
-      const b = run(seed, DESKTOP, 300, 2);
+      const a = run(seed, ROOM_BOUNDS, 300, 1);
+      const b = run(seed, ROOM_BOUNDS, 300, 2);
       // The two runs end at slightly different times, so compare all but the last few actions.
       const n = Math.min(a.length, b.length) - 3;
       expect(a.slice(0, n), `seed ${seed}`).toEqual(b.slice(0, n));
     }
-    expect(run(7, DESKTOP, 120)).not.toEqual(run(8, DESKTOP, 120));
+    expect(run(7, ROOM_BOUNDS, 120)).not.toEqual(run(8, ROOM_BOUNDS, 120));
   });
 
   it('comes back into the bounds after they shrink with the eagle outside', () => {
     for (let seed = 1; seed <= 50; seed++) {
-      const brain = createBrain(createRandom(seed), DESKTOP, {
-        x: DESKTOP.x,
-        z: DESKTOP.z,
+      const brain = createBrain(createRandom(seed), ROOM_BOUNDS, {
+        x: ROOM_BOUNDS.x,
+        z: ROOM_BOUNDS.z,
         facing: 2,
       });
       const nextDt = steps(seed);
@@ -130,7 +125,7 @@ describe('brain', () => {
 
       // Small bounds 3.5 units away from the eagle.
       const { x, z } = brain.pose();
-      const small: Bounds = { ...DESKTOP, x: x + 3, z: z + 1.8, halfU: 0.6, halfV: 0.6 };
+      const small: Bounds = { ...ROOM_BOUNDS, x: x + 3, z: z + 1.8, halfU: 0.6, halfV: 0.6 };
       brain.setBounds(small);
       expect(boundsContains(small, x, z)).toBe(false);
 
