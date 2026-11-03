@@ -10,3 +10,8 @@ export function smoothstep(x: number): number {
   const t = Math.min(1, Math.max(0, x));
   return t * t * (3 - 2 * t);
 }
+
+/** Slow at both ends, with cubic curves. */
+export function easeInOutCubic(x: number): number {
+  return x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2;
+}
