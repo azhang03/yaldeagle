@@ -24,7 +24,7 @@ Options for development. Add them to the address, for example `?bounds&mounts`. 
 | `?manual`     | Turns the brain off. Keys start each action: H hop, T turn left, Shift+T turn right, S squawk, L look. Visit actions: J jump 2 units forward, F face a random angle, G gaze on or off, I tilt, N shake. |
 | `?bounds`     | Draws the room bounds and one circle for each item on the ground. The eagle stays in the bounds and does not land in a circle.                                                                          |
 | `?mounts`     | Shows a dot on each mount point of the eagle (where gear attaches).                                                                                                                                     |
-| `?debug`      | Puts `yaldeagle` in the dev console, with `stage`, `eagle`, `animator`, `brain`, `exhibits`, and `visits`. Example: `yaldeagle.visits.mode()`                                                           |
+| `?debug`      | Puts `yaldeagle` in the dev console, with `stage`, `eagle`, `animator`, `brain`, `exhibits`, `visits`, and `gear`. Example: `yaldeagle.visits.mode()`                                                   |
 | `?panel=<id>` | Opens the panel of one item at once, without a visit. The ids are in `src/room/items.ts`, for example `?panel=fe`. Esc or × closes it.                                                                  |
 | `?slow`       | Builds the panel at a quarter of the speed.                                                                                                                                                             |
 
