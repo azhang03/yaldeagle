@@ -51,10 +51,10 @@ export function createPaint(mode: PaintMode = {}): Paint {
   const { grey = false, ghost, planes } = mode;
   // A paint with planes has its own planes, so it needs its own materials.
   const cache = planes ? new Map<string, Material>() : sharedMaterials;
-  const prefix = ghost ? `ghost ${ghost}` : grey ? 'grey' : 'color';
   const tone = (color: string): string => ghost ?? (grey ? greyOf(color) : color);
   const paint = (color: string, map?: Texture): Material => {
-    const key = `${prefix} ${color} ${map?.uuid ?? ''}`;
+    // The key is the color that the material shows, so equal colors share one material.
+    const key = `${ghost ? 'ghost' : 'lambert'} ${tone(color)} ${map?.uuid ?? ''}`;
     let material = cache.get(key);
     if (!material) {
       const options = {
