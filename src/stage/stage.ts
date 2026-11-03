@@ -161,8 +161,8 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
 /** Lines on the ground around the bounds and around each circle, for development. */
 function createOutline(bounds: Bounds, circles: readonly OutlineCircle[]): LineLoop {
   const material = new LineBasicMaterial({ color: '#e0457b' });
-  // Slightly above the ground, so the ground does not hide the lines.
-  const y = 0.01;
+  // Above the patches and the floor rings, so they do not hide the lines.
+  const y = 0.03;
   const corners = [
     [-1, -1],
     [1, -1],
