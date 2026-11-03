@@ -131,7 +131,8 @@ export function buildEagle(): Eagle {
     neck: mount(body, 'neck', at([0, 0.88, 0.34])),
     chest: mount(body, 'chest', at([0, 0.6, 0.33])),
     back: mount(body, 'back', at([0, 0.66, -0.3])),
-    foot: mount(body, 'foot', at([0, 0, 0.1])),
+    // On the root, so it stays on the ground when the body leans in a run.
+    foot: mount(root, 'foot', [0, 0, 0.1]),
   };
 
   return { root, body, legL, legR, head, jaw, wingL, wingR, mounts };
