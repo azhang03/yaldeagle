@@ -28,6 +28,8 @@ export interface Exhibit {
   readonly hit: Mesh;
   /** The pointer is over the item: it grows a little, rises, and glitches more often. */
   setHover(on: boolean): void;
+  /** The item of the current visit, from the click until the camera is back: the hover look. */
+  setSelected(on: boolean): void;
   /** The close view of a visit: the item grows, rises toward the beak, and turns slower. */
   setFocus(on: boolean): void;
   /** The whole exhibit with its patch shrinks away, or comes back. */
@@ -160,6 +162,7 @@ export function createExhibit(item: ItemDef): Exhibit {
   root.add(hit);
 
   let hover = false;
+  let selected = false;
   let focus = false;
   let hidden = false;
   /** Smooth values from 0 to 1 that follow hover, hidden, and focus. */
@@ -174,7 +177,7 @@ export function createExhibit(item: ItemDef): Exhibit {
   function update(dt: number): void {
     clock += dt;
     const t = clock;
-    const hovered = hover || focus;
+    const hovered = hover || selected;
     hoverK = approach(hoverK, hovered ? 1 : 0, 10, dt);
     sink = approach(sink, hidden ? 1 : 0, 5, dt);
     near = approach(near, focus ? 1 : 0, 3, dt);
@@ -222,6 +225,9 @@ export function createExhibit(item: ItemDef): Exhibit {
     hit,
     setHover: (on) => {
       hover = on;
+    },
+    setSelected: (on) => {
+      selected = on;
     },
     setFocus: (on) => {
       focus = on;

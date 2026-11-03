@@ -580,11 +580,21 @@ function steelBuild(tl: Timeline, c: Ctx): void {
 
 // ---------- Public API ----------
 
+/** A panel that builds or stands in its host. */
+export interface PanelBuild {
+  /** Resolves when the build ends, or at once after a skip. */
+  finished: Promise<void>;
+  /** Jumps to the end of the build. */
+  skip(): void;
+  /** Takes the panel down. Resolves when the host is empty. */
+  demolish(): Promise<void>;
+}
+
 export function buildPanel(
   host: HTMLElement,
   content: PanelContent,
   opts: { speed?: number; onClose?: () => void } = {},
-): { finished: Promise<void>; skip(): void; demolish(): Promise<void> } {
+): PanelBuild {
   const { speed = 1, onClose } = opts;
   live.get(host)?.kill();
   host.replaceChildren();

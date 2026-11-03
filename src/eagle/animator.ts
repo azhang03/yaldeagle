@@ -51,6 +51,8 @@ export interface Animator {
   cutIdle(): void;
   /** Holds the head turned by this yaw (radians), or null to free it. Looks do not show then. */
   setGaze(yaw: number | null): void;
+  /** The gaze yaw, or null. */
+  gaze(): number | null;
   /** Where the eagle is now, and its yaw in radians. */
   pose(): { x: number; z: number; yaw: number };
 }
@@ -197,6 +199,7 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
     setGaze: (next) => {
       gaze = next;
     },
+    gaze: () => gaze,
     pose: () => ({ x, z, yaw }),
   };
 }

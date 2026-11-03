@@ -40,3 +40,27 @@ canvas {
     height: 56%;
   }
 }
+
+/* The tooltip at the pointer (src/room/tooltip.ts). */
+#tip {
+  position: fixed;
+  z-index: 5;
+  pointer-events: none;
+  background: #222;
+  color: #fff;
+  padding: 6px 9px;
+  border-radius: 6px;
+  font:
+    13px/1.4 system-ui,
+    sans-serif;
+  max-width: 230px;
+  display: none;
+}
+
+#tip b {
+  display: block;
+}
+
+#tip .locked {
+  color: #9ef3ff;
+}

@@ -17,11 +17,15 @@ import type { Animator } from './animator';
 /** The gaze of the close view: the head turns toward the item. */
 const GAZE = -0.85;
 
-export function startManualKeys(animator: Animator, start: Pose, random: () => number): void {
+export function startManualKeys(
+  animator: Animator,
+  start: Pose,
+  random: () => number,
+  enabled: () => boolean,
+): void {
   // The pose at the end of the last action. `facing` is the 45° step for hops and turns.
   let { x, z, yaw } = animator.pose();
   let facing = start.facing;
-  let gaze = false;
 
   // event.code names the physical key, so Caps Lock and the keyboard layout do not matter.
   function act(code: string, shift: boolean): Action | null {
@@ -67,8 +71,7 @@ export function startManualKeys(animator: Animator, start: Pose, random: () => n
         return face;
       }
       case 'KeyG':
-        gaze = !gaze;
-        animator.setGaze(gaze ? GAZE : null);
+        animator.setGaze(animator.gaze() === null ? GAZE : null);
         return null;
       case 'KeyI':
         return { kind: 'tilt', duration: TUNING.visit.tilt };
@@ -81,6 +84,13 @@ export function startManualKeys(animator: Animator, start: Pose, random: () => n
 
   addEventListener('keydown', (event) => {
     if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+    // The keys do nothing while a visit moves the eagle.
+    if (!enabled()) return;
+    // With no body action, start from where the eagle is. A visit can move it.
+    if (animator.bodyLeft() <= 0) {
+      ({ x, z, yaw } = animator.pose());
+      facing = ((Math.round(yaw / (Math.PI / 4)) % 8) + 8) % 8;
+    }
     const action = act(event.code, event.shiftKey);
     if (action) animator.play(action);
   });
