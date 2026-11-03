@@ -4,3 +4,9 @@
 export function easeOutCubic(x: number): number {
   return 1 - (1 - x) ** 3;
 }
+
+/** Slow at both ends. Values outside 0 to 1 are clamped. */
+export function smoothstep(x: number): number {
+  const t = Math.min(1, Math.max(0, x));
+  return t * t * (3 - 2 * t);
+}

@@ -9,6 +9,7 @@ import { createRandom } from './lib/rng';
 import { ROOM_BOUNDS, roomPoint } from './lib/room';
 import { overview, startOffset } from './lib/view';
 import { createExhibit } from './room/exhibit';
+import { addGear } from './room/gear';
 import { ITEMS } from './room/items';
 import { createStage } from './stage/stage';
 
@@ -25,6 +26,7 @@ for (const exhibit of exhibits) stage.scene.add(exhibit.root);
 
 const eagle = buildEagle();
 stage.scene.add(eagle.root);
+addGear(eagle, ITEMS);
 if (params.has('mounts')) addMountMarkers(eagle);
 
 // ?seed=N replays the same moves. Without it, the seed is random.
@@ -44,10 +46,13 @@ if (!brain) startManualKeys(animator, start, random);
 const offset = startOffset(stage.aspect());
 
 // With ?debug, the dev console can reach these objects as `yaldeagle`.
-if (params.has('debug')) Reflect.set(window, 'yaldeagle', { stage, eagle, animator, brain });
+if (params.has('debug')) {
+  Reflect.set(window, 'yaldeagle', { stage, eagle, animator, brain, exhibits });
+}
 
 stage.start((dt) => {
   if (brain) for (const action of brain.update(dt)) animator.play(action);
   animator.update(dt);
+  for (const exhibit of exhibits) exhibit.update(dt);
   stage.setView(overview(stage.aspect(), offset));
 });

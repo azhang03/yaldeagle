@@ -45,31 +45,41 @@ CI (`.github/workflows/check.yml`) runs the checks, the tests, and the build on 
 
 Live site: https://yaldeagle.vercel.app/
 
+## Mark a credential as earned
+
+1. In `src/room/items.ts`, find the item and change its `status` to `'earned'`.
+2. Push to `main`. Vercel deploys the change.
+
+The item then shows its colors in the room. If the item has a `worn` entry, the eagle also wears it.
+
 ## Code map
 
-| Path                         | Use                                                                                                            |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `index.html`                 | Page shell.                                                                                                    |
-| `src/main.ts`                | Start-up code. It makes the stage, the room, the eagle, the animator, and the brain, and runs them each frame. |
-| `src/style.css`              | Page style.                                                                                                    |
-| `src/stage/stage.ts`         | Renderer, perspective camera, light over the room, ground, resize, and the frame loop.                         |
-| `src/lib/bounds.ts`          | The `Bounds` rectangle on the ground and its math.                                                             |
-| `src/lib/room.ts`            | Room coordinates (u to the screen right, v toward the camera) and the fixed room bounds.                       |
-| `src/lib/view.ts`            | Camera views: the overview of the room. Tests: `view.test.ts`.                                                 |
-| `src/lib/rng.ts`             | The seeded random source.                                                                                      |
-| `src/lib/ease.ts`            | Easing curves for the animator.                                                                                |
-| `src/room/areas.ts`          | The four areas of the room and their colors.                                                                   |
-| `src/room/items.ts`          | The item data: id, area, and place. Tests: `items.test.ts`.                                                    |
-| `src/room/exhibit.ts`        | One exhibit: the floor patch of an item.                                                                       |
-| `src/eagle/model.ts`         | `buildEagle()`: the eagle from boxes, with its part tree and mount points.                                     |
-| `src/eagle/palette.ts`       | The colors of the eagle.                                                                                       |
-| `src/eagle/mount-markers.ts` | The dots for `?mounts`.                                                                                        |
-| `src/eagle/actions.ts`       | The actions (idle, hop, turn, squawk, look) and `TUNING`, the timings and weights of the behavior.             |
-| `src/eagle/brain.ts`         | Decides the next action. No Three.js and no DOM. Tests: `brain.test.ts`.                                       |
-| `src/eagle/animator.ts`      | Plays the actions on the eagle's parts.                                                                        |
-| `src/eagle/manual-keys.ts`   | The keys for `?manual`.                                                                                        |
-| `public/`                    | Static files.                                                                                                  |
-| `vite.config.ts`             | Vite and Vitest config.                                                                                        |
+| Path                         | Use                                                                                                                              |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `index.html`                 | Page shell.                                                                                                                      |
+| `src/main.ts`                | Start-up code. It makes the stage, the exhibits, the eagle with its gear, the animator, and the brain, and runs them each frame. |
+| `src/style.css`              | Page style.                                                                                                                      |
+| `src/stage/stage.ts`         | Renderer, perspective camera, light over the room, ground, resize, and the frame loop.                                           |
+| `src/lib/bounds.ts`          | The `Bounds` rectangle on the ground and its math.                                                                               |
+| `src/lib/room.ts`            | Room coordinates (u to the screen right, v toward the camera) and the fixed room bounds.                                         |
+| `src/lib/view.ts`            | Camera views: the overview of the room. Tests: `view.test.ts`.                                                                   |
+| `src/lib/rng.ts`             | The seeded random source.                                                                                                        |
+| `src/lib/ease.ts`            | Easing curves.                                                                                                                   |
+| `src/room/areas.ts`          | The four areas of the room and their colors.                                                                                     |
+| `src/room/items.ts`          | The item data: place, status, text, and gear. Change the text here. Tests: `items.test.ts`.                                      |
+| `src/room/kit.ts`            | The box kit for the item models, and the paint modes (color, grey, ghost, cut).                                                  |
+| `src/room/models.ts`         | The 14 item models, and the parts that the eagle can wear on their own.                                                          |
+| `src/room/exhibit.ts`        | One exhibit: the patch, the floor ring, and the floating item with its state look (earned, progress, locked).                    |
+| `src/room/gear.ts`           | Puts the earned gear on the eagle mounts.                                                                                        |
+| `src/eagle/model.ts`         | `buildEagle()`: the eagle from boxes, with its part tree and mount points.                                                       |
+| `src/eagle/palette.ts`       | The colors of the eagle.                                                                                                         |
+| `src/eagle/mount-markers.ts` | The dots for `?mounts`.                                                                                                          |
+| `src/eagle/actions.ts`       | The actions (idle, hop, turn, squawk, look) and `TUNING`, the timings and weights of the behavior.                               |
+| `src/eagle/brain.ts`         | Decides the next action. No Three.js and no DOM. Tests: `brain.test.ts`.                                                         |
+| `src/eagle/animator.ts`      | Plays the actions on the eagle's parts.                                                                                          |
+| `src/eagle/manual-keys.ts`   | The keys for `?manual`.                                                                                                          |
+| `public/`                    | Static files.                                                                                                                    |
+| `vite.config.ts`             | Vite and Vitest config.                                                                                                          |
 
 Files in `src/lib/`, `src/room/areas.ts`, `src/room/items.ts`, `actions.ts`, and `brain.ts` do not import Three.js or use the DOM, so Vitest can test them without a browser.
 
