@@ -18,13 +18,13 @@ Then open the address that Vite prints.
 
 Options for development. Add them to the address, for example `?bounds&mounts`. They also work on the live site.
 
-| Option    | What it does                                                                                                           |
-| --------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `?seed=N` | Uses the seed N for the random choices. The console shows the seed of each visit. The same seed gives the same moves.  |
-| `?manual` | Turns the brain off. Keys start each action: H hop, T turn left, Shift+T turn right, S squawk, L look.                 |
-| `?bounds` | Draws the room bounds on the ground. The bounds are the area that the eagle can use.                                   |
-| `?mounts` | Shows a dot on each mount point of the eagle (where gear attaches).                                                    |
-| `?debug`  | Puts `yaldeagle` in the dev console, with `stage`, `eagle`, `animator`, and `brain`. Example: `yaldeagle.brain.pose()` |
+| Option    | What it does                                                                                                                                                                                            |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `?seed=N` | Uses the seed N for the random choices. The console shows the seed of each visit. The same seed gives the same moves.                                                                                   |
+| `?manual` | Turns the brain off. Keys start each action: H hop, T turn left, Shift+T turn right, S squawk, L look. Visit actions: J jump 2 units forward, F face a random angle, G gaze on or off, I tilt, N shake. |
+| `?bounds` | Draws the room bounds and one circle for each item on the ground. The eagle stays in the bounds and does not land in a circle.                                                                          |
+| `?mounts` | Shows a dot on each mount point of the eagle (where gear attaches).                                                                                                                                     |
+| `?debug`  | Puts `yaldeagle` in the dev console, with `stage`, `eagle`, `animator`, `brain`, and `exhibits`. Example: `yaldeagle.brain.pose()`                                                                      |
 
 ## Scripts
 

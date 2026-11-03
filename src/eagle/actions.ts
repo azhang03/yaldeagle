@@ -30,8 +30,8 @@ export const TUNING = {
     hops: { min: 2, max: 6 },
     /**
      * The chance of each new direction: straight on, one 45° step to a side, or two steps. A
-     * direction counts only if all its hops stay in the bounds. If none of these fit, each
-     * direction that fits has the same chance.
+     * direction counts only if all its hops fit: inside the bounds and outside every obstacle.
+     * If none of these fit, each direction that fits has the same chance.
      */
     turn: { none: 0.6, one: 0.3, two: 0.1 },
     /**

@@ -145,10 +145,11 @@ describe('brain', () => {
       for (let t = 0; t < 20; t += 0.02) brain.update(0.02);
       brain.restart(spot);
       expect(brain.pose()).toEqual(spot);
-      let { problem, first } = check(brain, 600, steps(seed));
+      let { problem, hops, first } = check(brain, 600, steps(seed));
       if (!(first?.kind === 'idle' && first.duration < TUNING.rest.min)) {
         problem ||= `first action ${first?.kind} for ${first?.duration} s`;
       }
+      if (!problem && hops <= 100) problem = `only ${hops} hops`;
       if (problem) problems.push(`seed ${seed}: ${problem}`);
     }
     expect(problems).toEqual([]);
