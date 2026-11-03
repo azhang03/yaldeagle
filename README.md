@@ -52,7 +52,7 @@ Live site: https://yaldeagle.vercel.app/
 1. In `src/room/items.ts`, find the item and change its `status` to `'earned'`.
 2. Push to `main`. Vercel deploys the change.
 
-The item then shows its colors in the room. If the item has a `worn` entry, the eagle also wears it.
+The item then shows its colors in the room. If the item has a `worn` entry, the eagle puts that gear on during a visit to the item. The eagle starts each page load with no gear.
 
 ## Code map
 
@@ -72,7 +72,7 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `src/room/kit.ts`            | The box kit for the item models, and the paint modes (color, grey, ghost, cut).                                                                                       |
 | `src/room/models.ts`         | The 14 item models, and the parts that the eagle can wear on their own.                                                                                               |
 | `src/room/exhibit.ts`        | One exhibit: the patch, the floor ring, and the floating item with its state look (earned, progress, locked).                                                         |
-| `src/room/gear.ts`           | Puts the earned gear on the eagle mounts.                                                                                                                             |
+| `src/room/gear.ts`           | The earned gear on the eagle mounts. It is hidden at the start, and a visit puts it on.                                                                               |
 | `src/room/plan.ts`           | The visit planner: the camera direction, the eagle spot, and the items to hide. No Three.js. Tests: `plan.test.ts`.                                                   |
 | `src/room/visit.ts`          | The visit: the jump, the flight down, the gesture, the panel, and the way back. It holds the app mode (wander, going, focus, leaving).                                |
 | `src/room/tooltip.ts`        | The text box at the pointer.                                                                                                                                          |

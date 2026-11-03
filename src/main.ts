@@ -12,7 +12,7 @@ import { startOffset } from './lib/view';
 import { buildPanel } from './panel/build';
 import { panelContent } from './panel/content';
 import { createExhibit } from './room/exhibit';
-import { addGear } from './room/gear';
+import { createGear } from './room/gear';
 import { ITEM_CLEARANCE, ITEMS } from './room/items';
 import { createTooltip } from './room/tooltip';
 import { createVisits } from './room/visit';
@@ -33,7 +33,8 @@ for (const exhibit of exhibits) stage.scene.add(exhibit.root);
 
 const eagle = buildEagle();
 stage.scene.add(eagle.root);
-addGear(eagle, ITEMS);
+// The eagle starts with no gear. A visit to an earned item puts its gear on.
+const gear = createGear(eagle, ITEMS);
 if (params.has('mounts')) addMountMarkers(eagle);
 
 // ?seed=N replays the same moves. Without it, the seed is random.
@@ -58,6 +59,7 @@ const visits = createVisits({
   animator,
   brain,
   exhibits: new Map(exhibits.map((e) => [e.item.id, e])),
+  gear,
   host,
   offset,
   aspect: () => stage.aspect(),
@@ -83,7 +85,7 @@ attachPointer(stage.canvas, stage.camera, exhibits, tooltip, {
 
 // With ?debug, the dev console can reach these objects as `yaldeagle`.
 if (params.has('debug')) {
-  Reflect.set(window, 'yaldeagle', { stage, eagle, animator, brain, exhibits, visits });
+  Reflect.set(window, 'yaldeagle', { stage, eagle, animator, brain, exhibits, visits, gear });
 }
 
 // ?panel=<id> opens the panel of one item at once, without a visit. Esc or × closes it.
@@ -112,5 +114,6 @@ stage.start((dt) => {
   visits.update(dt);
   animator.update(dt);
   for (const exhibit of exhibits) exhibit.update(dt);
+  gear.update(dt);
   stage.setView(visits.view());
 });

@@ -15,6 +15,7 @@ import { closeView, flight, overview, type CameraView, type OverviewOffset } fro
 import { buildPanel, type PanelBuild } from '../panel/build';
 import { panelContent } from '../panel/content';
 import type { Exhibit } from './exhibit';
+import type { Gear } from './gear';
 import type { ItemId } from './items';
 import { planVisit } from './plan';
 
@@ -41,6 +42,8 @@ export interface VisitDeps {
   /** Null with ?manual. Then the eagle does not wander after a visit. */
   readonly brain: Brain | null;
   readonly exhibits: ReadonlyMap<ItemId, Exhibit>;
+  /** The gear of an earned item goes on the eagle when its visit lands. */
+  readonly gear: Gear;
   /** The panel goes in this element. */
   readonly host: HTMLElement;
   /** The overview position and zoom. The way back flies to it. */
@@ -62,7 +65,7 @@ const GAZE = -0.85;
 const AT_SPOT = 0.05;
 
 export function createVisits(deps: VisitDeps): Visits {
-  const { animator, brain, exhibits, host, offset } = deps;
+  const { animator, brain, exhibits, gear, host, offset } = deps;
   const items = [...exhibits.values()].map((e) => e.item);
   let mode: Mode = 'wander';
   const currentMode = (): Mode => mode;
@@ -162,6 +165,7 @@ export function createVisits(deps: VisitDeps): Visits {
     await flyTo(() => closeView(at, plan.azimuth, deps.aspect()), FLY_DOWN, true);
     mode = 'focus';
     exhibit.setFocus(true);
+    gear.equip(id);
 
     // The gesture, while the panel builds.
     if (item.status === 'earned') {
