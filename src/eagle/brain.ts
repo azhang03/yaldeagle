@@ -15,10 +15,20 @@ import {
 export interface Brain {
   /** The pose at the end of the current body action. */
   pose(): Pose;
-  /** Sets new bounds, for example after a resize. */
-  setBounds(bounds: Bounds): void;
   /** Moves the time forward by dt seconds. Returns the actions that start, in order. */
   update(dt: number): Action[];
+  /**
+   * Starts again from a new pose, with no goal and a pause first. The facing of the pose must be
+   * a whole 45° step. A visit calls it when the eagle wanders again.
+   */
+  restart(pose: Pose): void;
+}
+
+/** A circle on the ground that the eagle does not land in, for example an item. */
+export interface Obstacle {
+  readonly x: number;
+  readonly z: number;
+  readonly radius: number;
 }
 
 interface Point {
@@ -28,10 +38,15 @@ interface Point {
 
 /**
  * Wander: pick a goal in the bounds, turn toward it in 45° steps, and hop to it with short pauses.
- * At the goal, rest and look around, squawk, or pick a new goal.
+ * At the goal, rest and look around, squawk, or pick a new goal. No hop lands outside the bounds
+ * or inside an obstacle.
  */
-export function createBrain(random: Random, initialBounds: Bounds, start: Pose): Brain {
-  let bounds = initialBounds;
+export function createBrain(
+  random: Random,
+  bounds: Bounds,
+  obstacles: readonly Obstacle[],
+  start: Pose,
+): Brain {
   let { x, z, facing } = start;
   let goal: Point | null = null;
   /** A pause comes after each hop and each turn. */
@@ -41,6 +56,11 @@ export function createBrain(random: Random, initialBounds: Bounds, start: Pose):
   let lookYaw = 0;
   let bodyLeft = 0;
   let lookLeft = Infinity;
+
+  /** True if a hop can land on the point (px, pz). */
+  const fits = (px: number, pz: number): boolean =>
+    boundsContains(bounds, px, pz) &&
+    obstacles.every((o) => Math.hypot(px - o.x, pz - o.z) >= o.radius);
 
   const between = (min: number, max: number): number => min + random() * (max - min);
 
@@ -67,8 +87,8 @@ export function createBrain(random: Random, initialBounds: Bounds, start: Pose):
 
   /**
    * A goal a whole number of hops away in a straight line, so the eagle does not turn on the
-   * way. Mostly straight on (TUNING.goal.turn). All hops stay in the bounds, because the bounds
-   * are convex and both ends are inside. Null if no line fits.
+   * way. Mostly straight on (TUNING.goal.turn). Each hop on the line fits: inside the bounds and
+   * outside every obstacle. Null if no line fits.
    */
   function newGoal(): Point | null {
     const { hops, turn } = TUNING.goal;
@@ -82,7 +102,7 @@ export function createBrain(random: Random, initialBounds: Bounds, start: Pose):
       let fit = 0;
       while (
         fit < hops.max &&
-        boundsContains(bounds, x + step.x * length * (fit + 1), z + step.z * length * (fit + 1))
+        fits(x + step.x * length * (fit + 1), z + step.z * length * (fit + 1))
       ) {
         fit++;
       }
@@ -131,9 +151,8 @@ export function createBrain(random: Random, initialBounds: Bounds, start: Pose):
     const step = facingVector(facing);
     const toX = x + step.x * TUNING.hop.length;
     const toZ = z + step.z * TUNING.hop.length;
-    // Inside the bounds, a hop that would leave them becomes a turn. Outside (after a resize),
-    // every hop goes toward the center, so it is allowed.
-    if (boundsContains(bounds, x, z) && !boundsContains(bounds, toX, toZ)) {
+    // A hop that does not fit becomes a turn, and the goal is dropped.
+    if (!fits(toX, toZ)) {
       goal = null;
       return turn(random() < 0.5 ? 1 : -1);
     }
@@ -146,8 +165,6 @@ export function createBrain(random: Random, initialBounds: Bounds, start: Pose):
       pauseNext = false;
       return { kind: 'idle', duration: between(TUNING.pause.min, TUNING.pause.max) };
     }
-    // After a resize that leaves the eagle outside, go back to the center of the bounds.
-    if (!boundsContains(bounds, x, z)) goal = { x: bounds.x, z: bounds.z };
     // Two tries: the first can end at the goal, and then the second starts from no goal.
     for (let attempt = 0; attempt < 2; attempt++) {
       if (!goal) {
@@ -209,11 +226,16 @@ export function createBrain(random: Random, initialBounds: Bounds, start: Pose):
     return started;
   }
 
-  return {
-    pose: () => ({ x, z, facing }),
-    setBounds: (next) => {
-      bounds = next;
-    },
-    update,
-  };
+  function restart(pose: Pose): void {
+    ({ x, z, facing } = pose);
+    goal = null;
+    pauseNext = true;
+    resting = false;
+    lookYaw = 0;
+    // The pause starts at the next update.
+    bodyLeft = 0;
+    lookLeft = Infinity;
+  }
+
+  return { pose: () => ({ x, z, facing }), update, restart };
 }

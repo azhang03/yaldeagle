@@ -10,15 +10,17 @@ import { ROOM_BOUNDS, roomPoint } from './lib/room';
 import { overview, startOffset } from './lib/view';
 import { createExhibit } from './room/exhibit';
 import { addGear } from './room/gear';
-import { ITEMS } from './room/items';
+import { ITEM_CLEARANCE, ITEMS } from './room/items';
 import { createStage } from './stage/stage';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('The page has no #app element.');
 
 const params = new URLSearchParams(location.search);
+// The eagle does not land near an item.
+const obstacles = ITEMS.map((item) => ({ ...roomPoint(item.u, item.v), radius: ITEM_CLEARANCE }));
 const stage = createStage(app, {
-  outline: params.has('bounds') ? { bounds: ROOM_BOUNDS, circles: [] } : null,
+  outline: params.has('bounds') ? { bounds: ROOM_BOUNDS, circles: obstacles } : null,
 });
 
 const exhibits = ITEMS.map(createExhibit);
@@ -40,7 +42,7 @@ const start: Pose = { ...roomPoint(0, 0.6), facing: 2 };
 const animator = createAnimator(eagle, start);
 
 // ?manual turns the brain off. Keys start each action instead (see manual-keys.ts).
-const brain = params.has('manual') ? null : createBrain(random, ROOM_BOUNDS, start);
+const brain = params.has('manual') ? null : createBrain(random, ROOM_BOUNDS, obstacles, start);
 if (!brain) startManualKeys(animator, start, random);
 
 const offset = startOffset(stage.aspect());
