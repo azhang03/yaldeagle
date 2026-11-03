@@ -12,7 +12,6 @@ const GROUND = 28; // free space below the panel band (room for the foundation u
 const EDGE = 26; // side margin of the finished panel
 const MAX_W = 600; // width limit of the finished panel
 const BP_PAD = 10; // the blueprint sheet is this much larger than the panel
-const LOCKED_LEAD = 'Nick has not earned this yet.';
 const BOUNCE = 'cubic-bezier(.3,1.45,.6,1)';
 const SETTLE = 'cubic-bezier(.3,.8,.3,1)';
 
@@ -177,7 +176,7 @@ function fillStage(stage: HTMLElement, c: PanelContent): HTMLElement[] {
     `<p class="pb-item">Item: ${esc(c.itemName)}</p>` +
     `<h2 class="pb-title">${esc(c.title)}</h2>` +
     `<span class="pb-status ${esc(c.status)}">${locked ? `<span class="pb-glitch">${label}</span>` : label}</span>` +
-    `<p class="pb-lead">${esc(locked ? LOCKED_LEAD : c.lead)}</p>` +
+    `<p class="pb-lead">${esc(c.lead)}</p>` +
     (c.confirm ? `<p class="pb-confirm">To confirm with Nick: ${esc(c.confirm)}</p>` : '');
   const floors: HTMLElement[] = [roof];
   for (const sec of c.sections) {

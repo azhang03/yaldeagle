@@ -193,6 +193,13 @@
   display: block;
   font-size: 18px;
 }
+.pb-sec .stats span {
+  font-size: 12px;
+  color: #888;
+}
+.pb-sec .stats + .small {
+  margin-top: 0;
+}
 .pb-sec .small,
 .pb-small {
   font-size: 12px;
