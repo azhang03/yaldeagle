@@ -42,6 +42,12 @@ export const TUNING = {
   },
   /** What the eagle does when it has no goal. */
   weights: { rest: 0.5, squawk: 0.2, wander: 0.3 },
+  /**
+   * The rare run (R6 "Long-stride charge"). A new goal line of at least minHops hops is a run with
+   * this chance, in place of the hops. Speed in units each second. The start and the stop are the
+   * times (seconds) to reach the full speed and to stop again.
+   */
+  run: { chance: 0.15, minHops: 4, speed: 2.6, start: 0.25, stop: 0.3 },
   /** The actions of a visit. The brain does not choose them. */
   visit: {
     /** The time of a quick turn to a free angle. */
@@ -153,6 +159,19 @@ export interface HopInPlaceAction {
   readonly duration: number;
 }
 
+/**
+ * A run in a straight line. The speed rises over TUNING.run.start, holds, and falls over
+ * TUNING.run.stop, so the eagle reaches the end point at the end of the duration.
+ */
+export interface RunAction {
+  readonly kind: 'run';
+  readonly duration: number;
+  readonly fromX: number;
+  readonly fromZ: number;
+  readonly toX: number;
+  readonly toZ: number;
+}
+
 export type BodyAction =
   | IdleAction
   | HopAction
@@ -162,7 +181,26 @@ export type BodyAction =
   | FaceAction
   | TiltAction
   | ShakeAction
-  | HopInPlaceAction;
+  | HopInPlaceAction
+  | RunAction;
+
+/** A run between two points at TUNING.run.speed, with a start and a stop. */
+export function runAction(
+  from: { readonly x: number; readonly z: number },
+  to: { readonly x: number; readonly z: number },
+): RunAction {
+  const { speed, start, stop } = TUNING.run;
+  const distance = Math.hypot(to.x - from.x, to.z - from.z);
+  return {
+    kind: 'run',
+    // The mean speed during the start and the stop is half the full speed.
+    duration: distance / speed + (start + stop) / 2,
+    fromX: from.x,
+    fromZ: from.z,
+    toX: to.x,
+    toZ: to.z,
+  };
+}
 
 /** A jump between two points. A longer jump takes more time. */
 export function jumpAction(

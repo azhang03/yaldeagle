@@ -44,9 +44,10 @@ function check(
   brain: Brain,
   seconds: number,
   nextDt: () => number,
-): { problem: string; hops: number; first: Action | null } {
+): { problem: string; hops: number; runs: number; first: Action | null } {
   let { x, z, facing } = brain.pose();
   let hops = 0;
+  let runs = 0;
   let problem = '';
   let first: Action | null = null;
   // The current body action, and the frame time of the last look in the current rests.
@@ -78,6 +79,29 @@ function check(
         if (insideObstacle(action.toX, action.toZ)) problem = `hop into an obstacle at ${t}`;
         x = action.toX;
         z = action.toZ;
+      } else if (action.kind === 'run') {
+        runs++;
+        if (action.fromX !== x || action.fromZ !== z) problem = 'run does not start at the pose';
+        const step = facingVector(facing);
+        const length = TUNING.hop.length;
+        const count = Math.round(Math.hypot(action.toX - x, action.toZ - z) / length);
+        if (count < TUNING.run.minHops) problem = `run of ${count} hops`;
+        if (
+          Math.abs(action.toX - x - step.x * length * count) > 1e-9 ||
+          Math.abs(action.toZ - z - step.z * length * count) > 1e-9
+        ) {
+          problem = 'run is not a whole number of hops in the facing direction';
+        }
+        // Each hop point on the line fits, so the eagle runs over no item.
+        for (let i = 1; i <= count; i++) {
+          const px = x + step.x * length * i;
+          const pz = z + step.z * length * i;
+          if (insideObstacle(px, pz) || !boundsContains(ROOM_BOUNDS, px, pz)) {
+            problem = `run over a point that does not fit at ${t}`;
+          }
+        }
+        x = action.toX;
+        z = action.toZ;
       } else if (action.kind === 'turn') {
         if (action.from !== facing || Math.abs(action.to - action.from) !== 1) {
           problem = `turn from ${action.from} to ${action.to} while facing ${facing}`;
@@ -100,22 +124,28 @@ function check(
     }
     if (!boundsContains(ROOM_BOUNDS, pose.x, pose.z)) problem = `outside at t = ${t.toFixed(2)}`;
   }
-  return { problem, hops, first };
+  return { problem, hops, runs, first };
 }
 
 describe('brain', () => {
   it('stays in the room, lands on no item, faces 45° steps, and wanders, for 50 seeds and 10 minutes', () => {
     // Each seed reports its first problem.
     const problems: string[] = [];
+    let runs = 0;
     for (let seed = 1; seed <= 50; seed++) {
       const brain = createBrain(createRandom(seed), ROOM_BOUNDS, OBSTACLES, START);
-      let { problem, hops } = check(brain, 600, steps(seed + 1000));
+      const result = check(brain, 600, steps(seed + 1000));
+      let { problem } = result;
+      const { hops } = result;
+      runs += result.runs;
       // About 1.2 s for each hop and its pause (about 20 hops each minute in a simulation).
       // Rests, turns, and squawks take part of the time.
       if (!problem && hops <= 100) problem = `only ${hops} hops`;
       if (problem) problems.push(`seed ${seed}: ${problem}`);
     }
     expect(problems).toEqual([]);
+    // Runs are rare, but they come.
+    expect(runs).toBeGreaterThan(0);
   });
 
   it('gives the same actions for the same seed with different frame times', () => {
