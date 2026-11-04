@@ -1,7 +1,7 @@
 // Plays the actions on the part tree of the eagle. Short hand-written tweens, no library.
 import { easeOutCubic, smoothstep } from '../lib/ease';
 import { facingAngle, TUNING, type Action, type BodyAction, type Pose } from './actions';
-import type { Eagle } from './model';
+import { HIP, type Eagle } from './model';
 
 /** How the motion looks. TUNING holds the timings. */
 const MOTION = {
@@ -39,6 +39,20 @@ const MOTION = {
   tiltRoll: 0.35,
   tiltPitch: 0.15,
   shakeYaw: 0.45,
+  /**
+   * The R6 run ("Long-stride charge"): the body leans forward and drops, the head cancels part of
+   * the lean, the wings stay up in a V, and the legs swing. The body rises twice each stride.
+   */
+  runLean: 0.55,
+  runLower: 0.08,
+  runHeadLevel: 0.4,
+  runWing: 2.0,
+  /** Strides each second, and the leg swing (radians). */
+  runStrideHz: 5,
+  runStep: 0.9,
+  runBob: 0.03,
+  /** The short lean back when the run stops (radians). */
+  runStopLean: 0.2,
 } as const;
 
 export interface Animator {
@@ -74,7 +88,7 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
 
   /** Puts the eagle at the end pose of the current body action. */
   function finishBody(): void {
-    if (body?.kind === 'hop' || body?.kind === 'jump') {
+    if (body?.kind === 'hop' || body?.kind === 'jump' || body?.kind === 'run') {
       x = body.toX;
       z = body.toZ;
     } else if (body?.kind === 'turn') {
@@ -113,6 +127,10 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
     let pitch = 0;
     let jaw = 0;
     let wings = 0;
+    // The run pose: body lean and drop, and the leg swing.
+    let bodyLean = 0;
+    let bodyDrop = 0;
+    let legSwing = 0;
     // Gesture angles on top of the snapped head angles.
     let addYaw = 0;
     let addRoll = 0;
@@ -165,6 +183,19 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
       addPitch = MOTION.tiltPitch * Math.sin(Math.PI * u);
     } else if (body?.kind === 'shake') {
       addYaw = MOTION.shakeYaw * Math.sin(6 * Math.PI * u) * (1 - u);
+    } else if (body?.kind === 'run') {
+      const run = runShape(elapsed, body);
+      x = body.fromX + (body.toX - body.fromX) * run.progress;
+      z = body.fromZ + (body.toZ - body.fromZ) * run.progress;
+      const k = run.blend;
+      const phase = 2 * Math.PI * MOTION.runStrideHz * elapsed;
+      bodyLean = k * MOTION.runLean - run.leanBack;
+      bodyDrop = k * MOTION.runLower;
+      legSwing = k * MOTION.runStep * Math.sin(phase);
+      // Two smooth rises for each stride.
+      lift = k * MOTION.runBob * ((1 - Math.cos(2 * phase)) / 2);
+      wings = k * MOTION.runWing;
+      addPitch = -k * MOTION.runLean * MOTION.runHeadLevel;
     }
 
     squash *= 1 + MOTION.breathAmount * Math.sin(clock * MOTION.breathSpeed);
@@ -175,6 +206,10 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
     eagle.root.rotation.y = yaw;
     eagle.wingL.rotation.z = wings;
     eagle.wingR.rotation.z = -wings;
+    eagle.body.rotation.x = bodyLean;
+    eagle.body.position.y = HIP - bodyDrop;
+    eagle.legL.rotation.x = legSwing;
+    eagle.legR.rotation.x = -legSwing;
 
     const looks = headFree && gaze === null;
     const snap = Math.min(1, dt * MOTION.headSnap);
@@ -223,4 +258,30 @@ function hopShape(t: number): { lift: number; squash: number; progress: number }
   }
   const u = Math.min(1, (t - crouch - air) / land);
   return { lift: 0, squash: 1 - MOTION.landSquash * Math.sin(Math.PI * u), progress: 1 };
+}
+
+/**
+ * The shape of a run at time t. The speed rises in a straight line over the start, holds, and
+ * falls over the stop, so `progress` reaches 1 at the end. `blend` (0 to 1) moves the body into
+ * the run pose, and `leanBack` is the short lean back at the stop. Start and stop must be above 0.
+ */
+function runShape(
+  t: number,
+  { duration, start, stop }: { duration: number; start: number; stop: number },
+): { progress: number; blend: number; leanBack: number } {
+  // The full speed as a part of the distance each second.
+  const v = 1 / (duration - (start + stop) / 2);
+  let progress: number;
+  if (t < start) progress = (v * t * t) / (2 * start);
+  else if (t < duration - stop) progress = (v * start) / 2 + v * (t - start);
+  else progress = 1 - (v * (duration - t) ** 2) / (2 * stop);
+  const stopU = Math.min(1, Math.max(0, (t - (duration - stop)) / stop));
+  let blend = 1;
+  if (t < start) blend = easeOutCubic(t / start);
+  else if (t > duration - stop) blend = 1 - easeOutCubic(stopU);
+  return {
+    progress: Math.min(1, Math.max(0, progress)),
+    blend,
+    leanBack: t > duration - stop ? MOTION.runStopLean * Math.sin(Math.PI * stopU) : 0,
+  };
 }

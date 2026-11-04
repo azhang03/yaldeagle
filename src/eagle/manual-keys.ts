@@ -1,13 +1,15 @@
 // Keys that start each action by hand, for development: H hop, T turn left, Shift+T turn right,
-// S squawk, L look, and the visit actions: J jump 2 units forward, F face a random angle, G gaze
-// on or off, I tilt, N shake. The keys do not check the bounds or the items. After F, H and T go
-// on from the 45° step nearest to the yaw, so T can snap the yaw to that step.
+// S squawk, L look, R run 4 hop lengths forward, and the visit actions: J jump 2 units forward, F
+// face a random angle, G gaze on or off, I tilt, N shake. The keys do not check the bounds or the
+// items. After F, H and T go on from the 45° step nearest to the yaw, so T can snap the yaw to
+// that step.
 import {
   faceAction,
   facingAngle,
   facingVector,
   HOP_DURATION,
   jumpAction,
+  runAction,
   TUNING,
   type Action,
   type Pose,
@@ -69,6 +71,17 @@ export function startManualKeys(
         // Hops and turns go on from the nearest 45° step.
         facing = ((Math.round(yaw / (Math.PI / 4)) % 8) + 8) % 8;
         return face;
+      }
+      case 'KeyR': {
+        // A run of 4 hop lengths along the yaw.
+        const length = 4 * TUNING.hop.length;
+        const run = runAction(
+          { x, z },
+          { x: x + length * Math.sin(yaw), z: z + length * Math.cos(yaw) },
+        );
+        x = run.toX;
+        z = run.toZ;
+        return run;
       }
       case 'KeyG':
         animator.setGaze(animator.gaze() === null ? GAZE : null);

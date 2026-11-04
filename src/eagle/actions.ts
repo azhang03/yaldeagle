@@ -42,6 +42,12 @@ export const TUNING = {
   },
   /** What the eagle does when it has no goal. */
   weights: { rest: 0.5, squawk: 0.2, wander: 0.3 },
+  /**
+   * The run (R6 "Long-stride charge") to a point that the person clicks on the floor. Speed in
+   * units each second. The start and the stop are the times (seconds) to reach the full speed
+   * and to stop again. A short run has a shorter start and stop.
+   */
+  run: { speed: 2.6, start: 0.25, stop: 0.3 },
   /** The actions of a visit. The brain does not choose them. */
   visit: {
     /** The time of a quick turn to a free angle. */
@@ -153,6 +159,21 @@ export interface HopInPlaceAction {
   readonly duration: number;
 }
 
+/**
+ * A run in a straight line. The speed rises over `start` seconds, holds, and falls over `stop`
+ * seconds, so the eagle reaches the end point at the end of the duration.
+ */
+export interface RunAction {
+  readonly kind: 'run';
+  readonly duration: number;
+  readonly fromX: number;
+  readonly fromZ: number;
+  readonly toX: number;
+  readonly toZ: number;
+  readonly start: number;
+  readonly stop: number;
+}
+
 export type BodyAction =
   | IdleAction
   | HopAction
@@ -162,7 +183,35 @@ export type BodyAction =
   | FaceAction
   | TiltAction
   | ShakeAction
-  | HopInPlaceAction;
+  | HopInPlaceAction
+  | RunAction;
+
+/**
+ * A run between two points at TUNING.run.speed, with a start and a stop. A run too short for the
+ * full start and stop gets a shorter start and stop, so it never goes past the full speed.
+ */
+export function runAction(
+  from: { readonly x: number; readonly z: number },
+  to: { readonly x: number; readonly z: number },
+): RunAction {
+  const { speed } = TUNING.run;
+  const distance = Math.hypot(to.x - from.x, to.z - from.z);
+  // The start and the stop use half the full speed on average. They fit in the run only if they
+  // use at most the whole distance.
+  const fit = Math.min(1, distance / speed / ((TUNING.run.start + TUNING.run.stop) / 2));
+  const start = TUNING.run.start * fit;
+  const stop = TUNING.run.stop * fit;
+  return {
+    kind: 'run',
+    duration: distance / speed + (start + stop) / 2,
+    fromX: from.x,
+    fromZ: from.z,
+    toX: to.x,
+    toZ: to.z,
+    start,
+    stop,
+  };
+}
 
 /** A jump between two points. A longer jump takes more time. */
 export function jumpAction(

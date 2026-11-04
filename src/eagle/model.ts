@@ -11,8 +11,12 @@ export interface Eagle {
    * for the facing, and its scale for squash and stretch.
    */
   readonly root: Group;
-  /** Legs, chest block, back block, collar, tail, wings, and head. */
+  /** Chest block, back block, collar, tail, wings, and head. Pivot at the hips (HIP above the ground). */
   readonly body: Group;
+  /** The left leg and foot. Pivot at the hip. A positive rotation.x swings the foot back. */
+  readonly legL: Group;
+  /** The same as legL, on the right side. */
+  readonly legR: Group;
   /** Pivot at the neck. rotation.y turns the head, z tilts it, and a negative x lifts the beak. */
   readonly head: Group;
   /** The lower beak. Pivot at the hinge. A positive rotation.x opens it. */
@@ -65,31 +69,41 @@ function mount(parent: Object3D, name: MountName, position: Vec3): Object3D {
   return m;
 }
 
+/** The height of the hip pivots of the body and the legs. */
+export const HIP = 0.27;
+
 export function buildEagle(): Eagle {
   const root = new Group();
   root.name = 'eagle';
-  const body = group(root, 'body', [0, 0, 0]);
 
-  // Yellow feet with dark talons, short legs, and brown feathers at the top of the legs.
-  for (const side of [-1, 1]) {
-    const x = side * 0.13;
-    box(body, [0.2, 0.05, 0.26], [x, 0.025, 0.1], 'feet');
+  // Each leg turns at its hip: yellow feet with dark talons, a short leg, and brown feathers at
+  // the top. The positions are relative to the hip.
+  function leg(side: 1 | -1): Group {
+    const hip = group(root, side === 1 ? 'legL' : 'legR', [side * 0.13, HIP, 0.04]);
+    box(hip, [0.2, 0.05, 0.26], [0, 0.025 - HIP, 0.06], 'feet');
     for (const k of [-1, 0, 1]) {
-      box(body, [0.045, 0.04, 0.05], [x + k * 0.07, 0.02, 0.245], 'talon');
+      box(hip, [0.045, 0.04, 0.05], [k * 0.07, 0.02 - HIP, 0.205], 'talon');
     }
-    box(body, [0.08, 0.16, 0.08], [x, 0.08, 0.06], 'feet');
-    box(body, [0.15, 0.15, 0.15], [x, 0.21, 0.04], 'brown');
+    box(hip, [0.08, 0.16, 0.08], [0, 0.08 - HIP, 0.02], 'feet');
+    box(hip, [0.15, 0.15, 0.15], [0, 0.21 - HIP, 0], 'brown');
+    return hip;
   }
+  const legL = leg(1);
+  const legR = leg(-1);
+
+  // The body turns at the hips. `at` gives a body position from a position over the ground.
+  const body = group(root, 'body', [0, HIP, 0]);
+  const at = ([x, y, z]: Vec3): Vec3 => [x, y - HIP, z];
 
   // An upright chest block, and a lower, shorter block to the back.
-  box(body, [0.56, 0.66, 0.5], [0, 0.62, 0.08], 'brown');
-  box(body, [0.58, 0.16, 0.52], [0, 0.88, 0.08], 'white');
-  box(body, [0.48, 0.42, 0.4], [0, 0.45, -0.3], 'brown');
-  box(body, [0.34, 0.1, 0.34], [0, 0.3, -0.62], 'tail', -0.5);
+  box(body, [0.56, 0.66, 0.5], at([0, 0.62, 0.08]), 'brown');
+  box(body, [0.58, 0.16, 0.52], at([0, 0.88, 0.08]), 'white');
+  box(body, [0.48, 0.42, 0.4], at([0, 0.45, -0.3]), 'brown');
+  box(body, [0.34, 0.1, 0.34], at([0, 0.3, -0.62]), 'tail', -0.5);
 
   // Folded wings that reach past the body. The positions are relative to the shoulder.
   function wing(side: 1 | -1): Group {
-    const shoulder = group(body, side === 1 ? 'wingL' : 'wingR', [side * 0.31, 0.86, 0.25]);
+    const shoulder = group(body, side === 1 ? 'wingL' : 'wingR', at([side * 0.31, 0.86, 0.25]));
     box(shoulder, [0.07, 0.56, 0.7], [0, -0.28, -0.35], 'wing');
     box(shoulder, [0.07, 0.22, 0.3], [side * -0.03, -0.56, -0.73], 'wing');
     return shoulder;
@@ -98,7 +112,7 @@ export function buildEagle(): Eagle {
   const wingR = wing(-1);
 
   // White head on a white neck, a hooked yellow beak, and one black eye on each side.
-  const head = group(body, 'head', [0, 0.9, 0.12]);
+  const head = group(body, 'head', at([0, 0.9, 0.12]));
   // Turn first, then lift, then tilt. So a lift raises the beak also when the head is turned.
   head.rotation.order = 'YXZ';
   box(head, [0.46, 0.16, 0.46], [0, 0.02, -0.02], 'white');
@@ -114,11 +128,12 @@ export function buildEagle(): Eagle {
   const mounts: Record<MountName, Object3D> = {
     hat: mount(head, 'hat', [0, 0.49, 0.04]),
     face: mount(head, 'face', [0, 0.4, 0.3]),
-    neck: mount(body, 'neck', [0, 0.88, 0.34]),
-    chest: mount(body, 'chest', [0, 0.6, 0.33]),
-    back: mount(body, 'back', [0, 0.66, -0.3]),
-    foot: mount(body, 'foot', [0, 0, 0.1]),
+    neck: mount(body, 'neck', at([0, 0.88, 0.34])),
+    chest: mount(body, 'chest', at([0, 0.6, 0.33])),
+    back: mount(body, 'back', at([0, 0.66, -0.3])),
+    // On the root, so it stays on the ground when the body leans in a run.
+    foot: mount(root, 'foot', [0, 0, 0.1]),
   };
 
-  return { root, body, head, jaw, wingL, wingR, mounts };
+  return { root, body, legL, legR, head, jaw, wingL, wingR, mounts };
 }
