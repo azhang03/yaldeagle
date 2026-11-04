@@ -98,18 +98,29 @@ export function createBrain(
    * outside every obstacle. Null if no line fits.
    *
    * The person can move the items, so the eagle can stand in an item circle with no line that
-   * fits. Then a loose line, which only stays in the bounds, takes it out.
+   * fits. Then a loose line, which only stays in the bounds, takes it out. It ends outside every
+   * circle if it can. In a very big crowd, it only moves on.
    */
   function newGoal(): Goal | null {
-    return lineGoal(fits, false) ?? (clear(x, z) ? null : lineGoal(inBounds, true));
+    if (clear(x, z)) return lineGoal(fits, false, false);
+    return (
+      lineGoal(fits, false, false) ??
+      lineGoal(inBounds, true, true) ??
+      lineGoal(inBounds, true, false)
+    );
   }
 
-  function lineGoal(ok: (px: number, pz: number) => boolean, loose: boolean): Goal | null {
+  function lineGoal(
+    ok: (px: number, pz: number) => boolean,
+    loose: boolean,
+    clearEnd: boolean,
+  ): Goal | null {
     const { hops, turn } = TUNING.goal;
     const length = TUNING.hop.length;
     // The weight of each turn size, from 0 to 4 steps. The two sides share the weight.
     const weights = [turn.none, turn.one / 2, turn.two / 2, 0, 0];
-    const options: { facing: number; fit: number; weight: number }[] = [];
+    // For each direction: the hop counts that a goal can have.
+    const options: { facing: number; counts: number[]; weight: number }[] = [];
     for (let d = -3; d <= 4; d++) {
       const direction = (facing + d + 8) % 8;
       const step = facingVector(direction);
@@ -120,8 +131,14 @@ export function createBrain(
       ) {
         fit++;
       }
-      if (fit >= hops.min) {
-        options.push({ facing: direction, fit, weight: weights[Math.abs(d)] ?? 0 });
+      const counts: number[] = [];
+      for (let count = hops.min; count <= fit; count++) {
+        if (!clearEnd || clear(x + step.x * length * count, z + step.z * length * count)) {
+          counts.push(count);
+        }
+      }
+      if (counts.length > 0) {
+        options.push({ facing: direction, counts, weight: weights[Math.abs(d)] ?? 0 });
       }
     }
     const first = options[0];
@@ -137,7 +154,7 @@ export function createBrain(
         break;
       }
     }
-    const count = hops.min + Math.floor(random() * (pick.fit - hops.min + 1));
+    const count = pick.counts[Math.floor(random() * pick.counts.length)] ?? hops.min;
     const step = facingVector(pick.facing);
     return { x: x + step.x * length * count, z: z + step.z * length * count, loose };
   }

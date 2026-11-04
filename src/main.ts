@@ -104,7 +104,7 @@ attachPointer(stage.canvas, stage.camera, exhibits, tooltip, {
   drag: (id, point) => {
     const exhibit = exhibitById.get(id);
     const obstacle = obstacleById.get(id);
-    if (!exhibit || !obstacle) return;
+    if (!exhibit || !obstacle || !inOverview()) return;
     const { u, v } = roomCoords(point.x, point.z);
     const place = clampPlace(u, v);
     exhibit.moveTo(place.u, place.v);

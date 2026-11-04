@@ -126,6 +126,10 @@ export function attachPointer(
 
   function startDrag(): void {
     if (!hold) return;
+    if (!handlers.canDrag()) {
+      endHold();
+      return;
+    }
     dragging = true;
     stopLongPress();
     tooltip.hide();
@@ -134,6 +138,11 @@ export function attachPointer(
   }
 
   function moveDrag(x: number, y: number): void {
+    // A visit can start during a drag (for example, one that waited for a trip). It ends the drag.
+    if (!handlers.canDrag()) {
+      endHold();
+      return;
+    }
     const g = hold && groundAt(x, y);
     if (!hold || !g) return;
     handlers.drag(hold.exhibit.item.id, { x: g.x + hold.offset.x, z: g.z + hold.offset.z });
@@ -189,11 +198,13 @@ export function attachPointer(
     const exhibit = handlers.canDrag() ? pick(x, y) : null;
     if (event.pointerType === 'touch') {
       touches.add(event.pointerId);
+      // During a touch drag, other fingers do nothing: no pan, no pinch, and no tap.
+      if (dragging) return;
       const p = local(x, y);
       gestures.down(event.pointerId, p.x, p.y);
       if (touches.size > 1) {
         // A second finger is a pinch, not a drag.
-        if (!dragging) endHold();
+        endHold();
         return;
       }
       hold = exhibit && holdAt(exhibit, event.pointerId, x, y);

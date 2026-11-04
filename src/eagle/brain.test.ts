@@ -170,4 +170,27 @@ describe('brain', () => {
       expect(out, `seed ${seed}`).toBeGreaterThan(0);
     }
   });
+
+  it('ends a way out of a circle outside it, so the eagle does not rest in it', () => {
+    // A circle of radius 1.2 around the start: the first hop of each line lands in it, so no line
+    // fits. Lines of 3 hops or more end outside it.
+    const circle: Obstacle[] = [{ ...START, radius: 1.2 }];
+    const problems: string[] = [];
+    for (let seed = 1; seed <= 30; seed++) {
+      const brain = createBrain(createRandom(seed), ROOM_BOUNDS, circle, START);
+      // The eagle can rest at the start. After its first hop, it must not stop in the circle.
+      let hopped = false;
+      for (let t = 0; t < 60; t += 0.02) {
+        for (const action of brain.update(0.02)) {
+          if (action.kind === 'hop') hopped = true;
+          const { x, z } = brain.pose();
+          const rest = action.kind === 'idle' && action.duration >= TUNING.rest.min;
+          if (hopped && rest && Math.hypot(x - START.x, z - START.z) < 1.2) {
+            problems.push(`seed ${seed}: rest in the circle at ${t.toFixed(1)} s`);
+          }
+        }
+      }
+    }
+    expect(problems).toEqual([]);
+  });
 });
