@@ -21,13 +21,22 @@ const LOCKED_TIMES = { lvlGap: 150, lvlDur: 220, hoard: 380, fin: 460, textGap: 
 const SVGNS = 'http://www.w3.org/2000/svg';
 const BRACE = `<svg class="pb-x" viewBox="0 0 10 10" preserveAspectRatio="none"><line x1="0" y1="10" x2="10" y2="0"/><line x1="0" y1="0" x2="10" y2="10"/></svg>`;
 
-interface Instance {
+/** One run of the build. A resize during the build starts a new run. */
+interface Run {
   finished: Promise<void>;
+  /** The host size at the start of the run. The build places its parts in px of this size. */
+  width: number;
+  height: number;
+  /** True until the run commits the finished panel or ends. */
+  building(): boolean;
   skip(): void;
   demolish(): Promise<void>;
   kill(): void;
 }
-const live = new WeakMap<HTMLElement, Instance>();
+/** The panel of each host, so that a second buildPanel clears the first. */
+const live = new WeakMap<HTMLElement, { kill(): void }>();
+/** A resize during the build starts it again at this many times the speed. */
+const REBUILD_SPEED = 3;
 
 interface Box {
   x: number;
@@ -590,15 +599,14 @@ export interface PanelBuild {
   demolish(): Promise<void>;
 }
 
-export function buildPanel(
+function startRun(
   host: HTMLElement,
   content: PanelContent,
-  opts: { speed?: number; onClose?: () => void } = {},
-): PanelBuild {
-  const { speed = 1, onClose } = opts;
-  live.get(host)?.kill();
-  host.replaceChildren();
-
+  speed: number,
+  onClose: (() => void) | undefined,
+): Run {
+  const width = host.clientWidth;
+  const height = host.clientHeight;
   const locked = content.status === 'locked';
   const root = el('div', `pb-root pb-building${locked ? ' pb-locked' : ''}`, host);
   root.style.setProperty('--area', content.area.color);
@@ -737,10 +745,7 @@ export function buildPanel(
     const y = fr.bottom - rr.top;
     for (let i = 0; i < 4; i++)
       dust(t2, layer, fr.left - rr.left + ((i + 0.5) / 4) * fr.width, y, 100, 3);
-    const end = (): void => {
-      root.remove();
-      if (live.get(host) === inst) live.delete(host);
-    };
+    const end = (): void => root.remove();
     demo = Promise.all(t2.anims.map((a) => a.finished)).then(end, end);
     return demo;
   }
@@ -750,10 +755,62 @@ export function buildPanel(
     for (const a of [...tl.anims, ...(demoTl?.anims ?? []), ...scroll.getAnimations()]) a.cancel();
     root.remove();
     resolveFinished();
-    if (live.get(host) === inst) live.delete(host);
   }
 
-  const inst: Instance = { finished, skip, demolish, kill };
-  live.set(host, inst);
-  return { finished, skip, demolish };
+  return { finished, width, height, building: () => !done && !killed, skip, demolish, kill };
+}
+
+export function buildPanel(
+  host: HTMLElement,
+  content: PanelContent,
+  opts: { speed?: number; onClose?: () => void } = {},
+): PanelBuild {
+  const { speed = 1, onClose } = opts;
+  live.get(host)?.kill();
+  host.replaceChildren();
+
+  let resolveFinished: () => void = () => {};
+  const finished = new Promise<void>((r) => (resolveFinished = r));
+  // A killed run resolves its own promise too. Only the current run ends the build.
+  const follow = (r: Run): void =>
+    void r.finished.then(() => {
+      if (r === run) resolveFinished();
+    });
+  let run = startRun(host, content, speed, onClose);
+  follow(run);
+
+  // The finished panel follows the host size in CSS, but the build uses the px size of its start.
+  // So a new host size during the build starts the build again, faster.
+  const observer = new ResizeObserver(() => {
+    if (!run.building()) return;
+    if (host.clientWidth === run.width && host.clientHeight === run.height) return;
+    run.kill();
+    run = startRun(host, content, speed * REBUILD_SPEED, onClose);
+    follow(run);
+  });
+  observer.observe(host);
+
+  let demo: Promise<void> | null = null;
+  const entry = {
+    kill(): void {
+      observer.disconnect();
+      run.kill();
+      resolveFinished();
+      if (live.get(host) === entry) live.delete(host);
+    },
+  };
+  live.set(host, entry);
+
+  return {
+    finished,
+    skip: () => run.skip(),
+    demolish(): Promise<void> {
+      if (demo) return demo;
+      observer.disconnect();
+      demo = run.demolish().then(() => {
+        if (live.get(host) === entry) live.delete(host);
+      });
+      return demo;
+    },
+  };
 }
