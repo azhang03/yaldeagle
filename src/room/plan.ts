@@ -31,7 +31,9 @@ export function planVisit(
   bounds: Bounds,
 ): VisitPlan {
   const p = roomPoint(item.u, item.v);
-  const others = items.filter((o) => o !== item).map((o) => ({ id: o.id, ...roomPoint(o.u, o.v) }));
+  const others = items
+    .filter((o) => o.id !== item.id)
+    .map((o) => ({ id: o.id, ...roomPoint(o.u, o.v) }));
   let best: (VisitPlan & { score: number }) | null = null;
   for (const offset of OFFSETS) {
     const azimuth = ROOM_AZIMUTH + (offset * Math.PI) / 180;

@@ -26,3 +26,8 @@ export const ROOM_BOUNDS: Bounds = {
   halfU: 7.4,
   halfV: 6.5,
 };
+
+/** Returns the room point (u, v) at the world point (x, z). The inverse of `roomPoint`. */
+export function roomCoords(x: number, z: number): { u: number; v: number } {
+  return { u: COS * x - SIN * z, v: SIN * x + COS * z };
+}

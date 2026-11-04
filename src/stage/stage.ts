@@ -25,16 +25,9 @@ const SHADOW_HALF = 13;
 /** The largest time step for one frame, in seconds. */
 const MAX_DT = 0.05;
 
-/** A circle on the ground, for the development outline. */
-export interface OutlineCircle {
-  readonly x: number;
-  readonly z: number;
-  readonly radius: number;
-}
-
 export interface StageOptions {
-  /** Draws the bounds and the circles on the ground, for development. Null draws nothing. */
-  readonly outline: { bounds: Bounds; circles: readonly OutlineCircle[] } | null;
+  /** Draws the bounds on the ground, for development. Null draws nothing. */
+  readonly outline: Bounds | null;
 }
 
 export interface Stage {
@@ -88,7 +81,7 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
   scene.add(ground);
 
   const camera = new PerspectiveCamera();
-  if (options.outline) scene.add(createOutline(options.outline.bounds, options.outline.circles));
+  if (options.outline) scene.add(createOutline(options.outline));
 
   let width = 1;
   let height = 1;
@@ -158,11 +151,14 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
   };
 }
 
-/** Lines on the ground around the bounds and around each circle, for development. */
-function createOutline(bounds: Bounds, circles: readonly OutlineCircle[]): LineLoop {
-  const material = new LineBasicMaterial({ color: '#e0457b' });
-  // Above the patches and the floor rings, so they do not hide the lines.
-  const y = 0.03;
+// The outline lines for development. They are above the patches and the floor rings, so those do
+// not hide the lines.
+const outlineMaterial = new LineBasicMaterial({ color: '#e0457b' });
+const OUTLINE_Y = 0.03;
+
+/** A line on the ground around the bounds, for development. */
+function createOutline(bounds: Bounds): LineLoop {
+  const y = OUTLINE_Y;
   const corners = [
     [-1, -1],
     [1, -1],
@@ -176,18 +172,20 @@ function createOutline(bounds: Bounds, circles: readonly OutlineCircle[]): LineL
         return [p.x, y, p.z];
       }),
     ),
-    material,
+    outlineMaterial,
   );
-  const segments = 48;
-  for (const c of circles) {
-    const points: [number, number, number][] = [];
-    for (let i = 0; i < segments; i++) {
-      const a = (i / segments) * 2 * Math.PI;
-      points.push([c.x + c.radius * Math.cos(a), y, c.z + c.radius * Math.sin(a)]);
-    }
-    box.add(new LineLoop(loopGeometry(points), material));
-  }
   return box;
+}
+
+/** A line on the ground around the point (0, 0), for development. Add it to a moving object. */
+export function createCircleLine(radius: number): LineLoop {
+  const segments = 48;
+  const points: [number, number, number][] = [];
+  for (let i = 0; i < segments; i++) {
+    const a = (i / segments) * 2 * Math.PI;
+    points.push([radius * Math.cos(a), OUTLINE_Y, radius * Math.sin(a)]);
+  }
+  return new LineLoop(loopGeometry(points), outlineMaterial);
 }
 
 function loopGeometry(points: readonly (readonly [number, number, number])[]): BufferGeometry {

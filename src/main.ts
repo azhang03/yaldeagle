@@ -7,29 +7,35 @@ import { buildEagle } from './eagle/model';
 import { addMountMarkers } from './eagle/mount-markers';
 import { attachPointer } from './input/pointer';
 import { createRandom } from './lib/rng';
-import { ROOM_BOUNDS, roomPoint } from './lib/room';
+import { ROOM_BOUNDS, roomCoords, roomPoint } from './lib/room';
 import { clampOffset, panBy, startOffset, zoomAt } from './lib/view';
 import { buildPanel } from './panel/build';
 import { panelContent } from './panel/content';
 import { createExhibit } from './room/exhibit';
 import { createGear } from './room/gear';
 import { ITEM_CLEARANCE, ITEMS } from './room/items';
+import { clampPlace } from './room/place';
 import { createTooltip } from './room/tooltip';
 import { createVisits } from './room/visit';
-import { createStage } from './stage/stage';
+import { createCircleLine, createStage } from './stage/stage';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('The page has no #app element.');
 
 const params = new URLSearchParams(location.search);
-// The eagle does not land near an item.
-const obstacles = ITEMS.map((item) => ({ ...roomPoint(item.u, item.v), radius: ITEM_CLEARANCE }));
-const stage = createStage(app, {
-  outline: params.has('bounds') ? { bounds: ROOM_BOUNDS, circles: obstacles } : null,
-});
+const stage = createStage(app, { outline: params.has('bounds') ? ROOM_BOUNDS : null });
 
 const exhibits = ITEMS.map(createExhibit);
+const exhibitById = new Map(exhibits.map((e) => [e.item.id, e]));
 for (const exhibit of exhibits) stage.scene.add(exhibit.root);
+// The eagle does not land near an item. A drag moves the circle with its item. The brain and the
+// trips read this list, so they use the places of the moment.
+const obstacles = ITEMS.map((item) => ({ ...roomPoint(item.u, item.v), radius: ITEM_CLEARANCE }));
+const obstacleById = new Map(ITEMS.map((item, i) => [item.id, obstacles[i]]));
+// ?bounds draws each circle on its item, so it moves with the item.
+if (params.has('bounds')) {
+  for (const exhibit of exhibits) exhibit.root.add(createCircleLine(ITEM_CLEARANCE));
+}
 
 const eagle = buildEagle();
 stage.scene.add(eagle.root);
@@ -58,7 +64,7 @@ if (!host) throw new Error('The page has no #panel-host element.');
 const visits = createVisits({
   animator,
   brain,
-  exhibits: new Map(exhibits.map((e) => [e.item.id, e])),
+  exhibits: exhibitById,
   obstacles,
   gear,
   host,
@@ -92,6 +98,19 @@ attachPointer(stage.canvas, stage.camera, exhibits, tooltip, {
   },
   zoom: (x, y, factor) => {
     if (inOverview()) zoomAt(offset, x, y, factor, stage.viewport(), stage.aspect());
+  },
+  // A drag moves an item, while the camera shows the overview.
+  canDrag: inOverview,
+  drag: (id, point) => {
+    const exhibit = exhibitById.get(id);
+    const obstacle = obstacleById.get(id);
+    if (!exhibit || !obstacle || !inOverview()) return;
+    const { u, v } = roomCoords(point.x, point.z);
+    const place = clampPlace(u, v);
+    exhibit.moveTo(place.u, place.v);
+    const p = roomPoint(place.u, place.v);
+    obstacle.x = p.x;
+    obstacle.z = p.z;
   },
 });
 

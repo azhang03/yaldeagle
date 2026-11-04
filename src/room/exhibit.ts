@@ -26,6 +26,10 @@ export interface Exhibit {
   readonly root: Group;
   /** An invisible box around the item, for the pointer. */
   readonly hit: Mesh;
+  /** The place of the moment in room coordinates. It starts at the place in `items.ts`. */
+  place(): { u: number; v: number };
+  /** Moves the exhibit to the room point (u, v). */
+  moveTo(u: number, v: number): void;
   /** The pointer is over the item: it grows a little, rises, and glitches more often. */
   setHover(on: boolean): void;
   /** The item of the current visit, from the click until the camera is back: the hover look. */
@@ -106,8 +110,13 @@ export function createExhibit(item: ItemDef): Exhibit {
   const area = AREAS[item.area];
   const root = new Group();
   root.name = `exhibit-${item.id}`;
-  const p = roomPoint(item.u, item.v);
-  root.position.set(p.x, 0, p.z);
+  let place = { u: item.u, v: item.v };
+  function moveTo(u: number, v: number): void {
+    place = { u, v };
+    const p = roomPoint(u, v);
+    root.position.set(p.x, 0, p.z);
+  }
+  moveTo(item.u, item.v);
 
   // The patch is part of the exhibit, so it shrinks away with the item.
   const { fill, edge } = areaMaterials(item.area);
@@ -223,6 +232,8 @@ export function createExhibit(item: ItemDef): Exhibit {
     item,
     root,
     hit,
+    place: () => place,
+    moveTo,
     setHover: (on) => {
       hover = on;
     },
