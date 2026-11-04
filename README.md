@@ -1,6 +1,11 @@
 # Yaldeagle
 
-Yaldeagle is a small 3D toy for the browser. A blocky eagle in the style of Crossy Road wanders an empty white space. It hops, turns, looks around, and squawks. The game is for Nicholas Yalda. Nicholas is a civil engineer, and he wants every license and certificate he can get. Later versions add gear on the eagle for each license.
+Yaldeagle is a small 3D toy for the browser, made for Nicholas Yalda. Nicholas is a civil engineer, and he wants every license and certificate he can get. A blocky eagle in the style of Crossy Road wanders a white room with 14 items about Nick: his licenses and certificates, his work, esports, and Scouting.
+
+- Click an item: the eagle jumps to it, the camera flies down, and a panel tells what the item stands for. A visit to an earned item puts its gear on the eagle. Esc, ×, or a click on the floor goes back.
+- Click the floor: the eagle runs there, or jumps over an item in the way.
+- Drag an item to move it. On a touch screen, hold the item for half a second first. The places reset when the page loads again.
+- On a phone, swipe to pan, pinch to zoom, and tap to click.
 
 ## Requirements
 
