@@ -74,7 +74,7 @@ export function startManualKeys(
       }
       case 'KeyR': {
         // A run of 4 hop lengths along the yaw.
-        const length = TUNING.run.minHops * TUNING.hop.length;
+        const length = 4 * TUNING.hop.length;
         const run = runAction(
           { x, z },
           { x: x + length * Math.sin(yaw), z: z + length * Math.cos(yaw) },

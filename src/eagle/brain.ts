@@ -5,7 +5,6 @@ import type { Random } from '../lib/rng';
 import {
   facingVector,
   HOP_DURATION,
-  runAction,
   TUNING,
   type Action,
   type BodyAction,
@@ -37,11 +36,6 @@ interface Point {
   readonly z: number;
 }
 
-/** A goal at the end of a straight line. With `run`, the eagle runs the line in place of hops. */
-interface Goal extends Point {
-  readonly run: boolean;
-}
-
 /**
  * Wander: pick a goal in the bounds, turn toward it in 45° steps, and hop to it with short pauses.
  * At the goal, rest and look around, squawk, or pick a new goal. No hop lands outside the bounds
@@ -54,7 +48,7 @@ export function createBrain(
   start: Pose,
 ): Brain {
   let { x, z, facing } = start;
-  let goal: Goal | null = null;
+  let goal: Point | null = null;
   /** A pause comes after each hop and each turn. */
   let pauseNext = false;
   /** True while the current body action is a rest. The head looks around only then. */
@@ -94,10 +88,9 @@ export function createBrain(
   /**
    * A goal a whole number of hops away in a straight line, so the eagle does not turn on the
    * way. Mostly straight on (TUNING.goal.turn). Each hop on the line fits: inside the bounds and
-   * outside every obstacle. A line of at least TUNING.run.minHops hops is a run with the chance
-   * TUNING.run.chance. Null if no line fits.
+   * outside every obstacle. Null if no line fits.
    */
-  function newGoal(): Goal | null {
+  function newGoal(): Point | null {
     const { hops, turn } = TUNING.goal;
     const length = TUNING.hop.length;
     // The weight of each turn size, from 0 to 4 steps. The two sides share the weight.
@@ -132,9 +125,7 @@ export function createBrain(
     }
     const count = hops.min + Math.floor(random() * (pick.fit - hops.min + 1));
     const step = facingVector(pick.facing);
-    // Draw the run chance only for long lines, so short lines keep the order of the numbers.
-    const run = count >= TUNING.run.minHops && random() < TUNING.run.chance;
-    return { x: x + step.x * length * count, z: z + step.z * length * count, run };
+    return { x: x + step.x * length * count, z: z + step.z * length * count };
   }
 
   /** With no goal: rest, squawk, or pick a new goal (then it returns null). */
@@ -147,8 +138,8 @@ export function createBrain(
     return goal ? null : rest();
   }
 
-  /** One step toward the goal: a turn, a hop, or a run. Null if the eagle is at the goal. */
-  function moveToward(target: Goal): BodyAction | null {
+  /** One step toward the goal: a turn or a hop. Null if the eagle is at the goal. */
+  function moveToward(target: Point): BodyAction | null {
     const dx = target.x - x;
     const dz = target.z - z;
     if (Math.hypot(dx, dz) < TUNING.goal.arrive * TUNING.hop.length) return null;
@@ -157,14 +148,6 @@ export function createBrain(
     const diff = (desired - facing + 8) % 8;
     if (diff !== 0) return turn(diff < 4 ? 1 : diff > 4 ? -1 : random() < 0.5 ? 1 : -1);
 
-    if (target.run) {
-      // The whole line fits, because newGoal checked each hop on it.
-      const action = runAction({ x, z }, target);
-      x = target.x;
-      z = target.z;
-      pauseNext = true;
-      return action;
-    }
     const step = facingVector(facing);
     const toX = x + step.x * TUNING.hop.length;
     const toZ = z + step.z * TUNING.hop.length;

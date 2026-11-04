@@ -184,7 +184,7 @@ export function createAnimator(eagle: Eagle, start: Pose): Animator {
     } else if (body?.kind === 'shake') {
       addYaw = MOTION.shakeYaw * Math.sin(6 * Math.PI * u) * (1 - u);
     } else if (body?.kind === 'run') {
-      const run = runShape(elapsed, body.duration);
+      const run = runShape(elapsed, body);
       x = body.fromX + (body.toX - body.fromX) * run.progress;
       z = body.fromZ + (body.toZ - body.fromZ) * run.progress;
       const k = run.blend;
@@ -261,15 +261,14 @@ function hopShape(t: number): { lift: number; squash: number; progress: number }
 }
 
 /**
- * The shape of a run at time t of its duration. The speed rises in a straight line over the start,
- * holds, and falls over the stop, so `progress` reaches 1 at the end. `blend` (0 to 1) moves the
- * body into the run pose, and `leanBack` is the short lean back at the stop.
+ * The shape of a run at time t. The speed rises in a straight line over the start, holds, and
+ * falls over the stop, so `progress` reaches 1 at the end. `blend` (0 to 1) moves the body into
+ * the run pose, and `leanBack` is the short lean back at the stop. Start and stop must be above 0.
  */
 function runShape(
   t: number,
-  duration: number,
+  { duration, start, stop }: { duration: number; start: number; stop: number },
 ): { progress: number; blend: number; leanBack: number } {
-  const { start, stop } = TUNING.run;
   // The full speed as a part of the distance each second.
   const v = 1 / (duration - (start + stop) / 2);
   let progress: number;

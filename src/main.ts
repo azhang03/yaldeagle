@@ -59,6 +59,7 @@ const visits = createVisits({
   animator,
   brain,
   exhibits: new Map(exhibits.map((e) => [e.item.id, e])),
+  obstacles,
   gear,
   host,
   offset,
@@ -67,28 +68,30 @@ const visits = createVisits({
 });
 if (!brain) startManualKeys(animator, start, random, () => visits.mode() === 'wander');
 
-// A click or a tap counts only in wander and focus.
+// A click or a tap counts in wander, in a trip, and in focus. A click on the floor sends the eagle
+// there while it wanders, and ends a visit in focus.
 const tooltip = createTooltip();
-const canAct = (): boolean => visits.mode() === 'wander' || visits.mode() === 'focus';
+const canAct = (): boolean => ['wander', 'running', 'focus'].includes(visits.mode());
+// The overview moves only when the camera is in the overview.
+const inOverview = (): boolean => visits.mode() === 'wander' || visits.mode() === 'running';
 attachPointer(stage.canvas, stage.camera, exhibits, tooltip, {
   open: (id) => {
     if (!canAct()) return;
     void visits.open(id);
     tooltip.hide();
   },
-  floor: () => {
-    void visits.close();
+  floor: (point) => {
+    if (point && inOverview()) visits.runTo(point);
+    else void visits.close();
     tooltip.hide();
   },
   canHover: canAct,
-  // Touch pan and zoom move the overview, in wander only.
+  // Touch pan and zoom.
   pan: (dx, dy) => {
-    if (visits.mode() === 'wander') panBy(offset, dx, dy, stage.viewport(), stage.aspect());
+    if (inOverview()) panBy(offset, dx, dy, stage.viewport(), stage.aspect());
   },
   zoom: (x, y, factor) => {
-    if (visits.mode() === 'wander') {
-      zoomAt(offset, x, y, factor, stage.viewport(), stage.aspect());
-    }
+    if (inOverview()) zoomAt(offset, x, y, factor, stage.viewport(), stage.aspect());
   },
 });
 

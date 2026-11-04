@@ -1,6 +1,6 @@
 // Connects the pointer to the room. Mouse: hover and the tooltip, and a click on an item or the
 // floor. Touch: one finger pans, two fingers pinch to zoom, and a tap acts as a click.
-import { Raycaster, Vector2, type Camera, type Object3D } from 'three';
+import { Plane, Raycaster, Vector2, Vector3, type Camera, type Object3D } from 'three';
 import type { Exhibit } from '../room/exhibit';
 import type { ItemId } from '../room/items';
 import type { Tooltip } from '../room/tooltip';
@@ -9,8 +9,8 @@ import { createGestures } from './gestures';
 export interface PointerHandlers {
   /** A click or a tap on an item. */
   open(id: ItemId): void;
-  /** A click or a tap on the floor, or Esc. */
-  floor(): void;
+  /** A click or a tap on the floor at the ground point, or Esc (then the point is null). */
+  floor(point: { x: number; z: number } | null): void;
   /** True if hover can show now. */
   canHover(): boolean;
   /** A touch pan by (dx, dy) pixels. */
@@ -33,14 +33,28 @@ export function attachPointer(
   const ndc = new Vector2();
   const byHit = new Map<Object3D, Exhibit>(exhibits.map((e) => [e.hit, e]));
   const hits = exhibits.map((e) => e.hit);
+  const ground = new Plane(new Vector3(0, 1, 0), 0);
+  const hitPoint = new Vector3();
   let hovered: Exhibit | null = null;
   let down: { x: number; y: number } | null = null;
 
-  /** The exhibit under the screen point, or null. Hidden exhibits do not count. */
-  function pick(x: number, y: number): Exhibit | null {
+  /** Aims the ray through the screen point. */
+  function aim(x: number, y: number): void {
     const rect = canvas.getBoundingClientRect();
     ndc.set(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
+  }
+
+  /** The ground point under the screen point, or null if the ray misses the ground. */
+  function groundAt(x: number, y: number): { x: number; z: number } | null {
+    aim(x, y);
+    const p = raycaster.ray.intersectPlane(ground, hitPoint);
+    return p ? { x: p.x, z: p.z } : null;
+  }
+
+  /** The exhibit under the screen point, or null. Hidden exhibits do not count. */
+  function pick(x: number, y: number): Exhibit | null {
+    aim(x, y);
     for (const hit of raycaster.intersectObjects(hits, false)) {
       const exhibit = byHit.get(hit.object);
       if (exhibit && !exhibit.isHidden()) return exhibit;
@@ -60,7 +74,7 @@ export function attachPointer(
   function press(x: number, y: number): void {
     const exhibit = pick(x, y);
     if (exhibit) handlers.open(exhibit.item.id);
-    else handlers.floor();
+    else handlers.floor(groundAt(x, y));
   }
 
   // The gestures get canvas points, so a zoom keeps the right floor point in place.
@@ -122,6 +136,6 @@ export function attachPointer(
   });
 
   addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') handlers.floor();
+    if (event.key === 'Escape') handlers.floor(null);
   });
 }

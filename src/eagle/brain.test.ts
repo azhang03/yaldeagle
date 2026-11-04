@@ -44,18 +44,9 @@ function check(
   brain: Brain,
   seconds: number,
   nextDt: () => number,
-): { problem: string; hops: number; runs: number; longLines: number; first: Action | null } {
+): { problem: string; hops: number; first: Action | null } {
   let { x, z, facing } = brain.pose();
   let hops = 0;
-  let runs = 0;
-  // Straight hop lines of TUNING.run.minHops hops or more: a hop streak with only pauses in it.
-  // Two goals in the same direction can join into one streak, so this count is close, not exact.
-  let longLines = 0;
-  let streak = 0;
-  const endStreak = () => {
-    if (streak >= TUNING.run.minHops) longLines++;
-    streak = 0;
-  };
   let problem = '';
   let first: Action | null = null;
   // The current body action, and the frame time of the last look in the current rests.
@@ -67,8 +58,6 @@ function check(
     t += dt;
     for (const action of brain.update(dt)) {
       first ??= action;
-      if (action.kind === 'hop') streak++;
-      else if (action.kind !== 'look' && !(action.kind === 'idle' && !isRest(action))) endStreak();
       if (!(action.duration > 0)) problem = `${action.kind} with duration ${action.duration}`;
       if (action.kind !== 'look') {
         // A rest after a rest keeps the head on its look. Other actions end the looks.
@@ -87,29 +76,6 @@ function check(
           problem = 'hop is not one hop length in the facing direction';
         }
         if (insideObstacle(action.toX, action.toZ)) problem = `hop into an obstacle at ${t}`;
-        x = action.toX;
-        z = action.toZ;
-      } else if (action.kind === 'run') {
-        runs++;
-        if (action.fromX !== x || action.fromZ !== z) problem = 'run does not start at the pose';
-        const step = facingVector(facing);
-        const length = TUNING.hop.length;
-        const count = Math.round(Math.hypot(action.toX - x, action.toZ - z) / length);
-        if (count < TUNING.run.minHops) problem = `run of ${count} hops`;
-        if (
-          Math.abs(action.toX - x - step.x * length * count) > 1e-9 ||
-          Math.abs(action.toZ - z - step.z * length * count) > 1e-9
-        ) {
-          problem = 'run is not a whole number of hops in the facing direction';
-        }
-        // Each hop point on the line fits, so the eagle runs over no item.
-        for (let i = 1; i <= count; i++) {
-          const px = x + step.x * length * i;
-          const pz = z + step.z * length * i;
-          if (insideObstacle(px, pz) || !boundsContains(ROOM_BOUNDS, px, pz)) {
-            problem = `run over a point that does not fit at ${t}`;
-          }
-        }
         x = action.toX;
         z = action.toZ;
       } else if (action.kind === 'turn') {
@@ -134,35 +100,22 @@ function check(
     }
     if (!boundsContains(ROOM_BOUNDS, pose.x, pose.z)) problem = `outside at t = ${t.toFixed(2)}`;
   }
-  endStreak();
-  return { problem, hops, runs, longLines, first };
+  return { problem, hops, first };
 }
 
 describe('brain', () => {
   it('stays in the room, lands on no item, faces 45° steps, and wanders, for 50 seeds and 10 minutes', () => {
     // Each seed reports its first problem.
     const problems: string[] = [];
-    let runs = 0;
-    let longLines = 0;
     for (let seed = 1; seed <= 50; seed++) {
       const brain = createBrain(createRandom(seed), ROOM_BOUNDS, OBSTACLES, START);
-      const result = check(brain, 600, steps(seed + 1000));
-      let { problem } = result;
-      const { hops } = result;
-      runs += result.runs;
-      longLines += result.longLines;
+      let { problem, hops } = check(brain, 600, steps(seed + 1000));
       // About 1.2 s for each hop and its pause (about 20 hops each minute in a simulation).
       // Rests, turns, and squawks take part of the time.
       if (!problem && hops <= 100) problem = `only ${hops} hops`;
       if (problem) problems.push(`seed ${seed}: ${problem}`);
     }
     expect(problems).toEqual([]);
-    // A long line is a run with the chance TUNING.run.chance. The hop streaks only estimate the
-    // long lines that were not runs, so allow a wide margin.
-    expect(runs).toBeGreaterThan(0);
-    const share = runs / (runs + longLines);
-    expect(share).toBeGreaterThan(TUNING.run.chance / 2);
-    expect(share).toBeLessThan(TUNING.run.chance * 1.5);
   });
 
   it('gives the same actions for the same seed with different frame times', () => {

@@ -39,3 +39,16 @@ export function boundsContains(bounds: Bounds, x: number, z: number): boolean {
   const tolerance = 1e-9;
   return Math.abs(u) <= bounds.halfU + tolerance && Math.abs(v) <= bounds.halfV + tolerance;
 }
+
+/** Returns the point of the bounds nearest to the world point (x, z). */
+export function boundsClamp(bounds: Bounds, x: number, z: number): { x: number; z: number } {
+  const dx = x - bounds.x;
+  const dz = z - bounds.z;
+  const u = dx * bounds.ux + dz * bounds.uz;
+  const v = -dx * bounds.uz + dz * bounds.ux;
+  return boundsPoint(
+    bounds,
+    Math.min(bounds.halfU, Math.max(-bounds.halfU, u)),
+    Math.min(bounds.halfV, Math.max(-bounds.halfV, v)),
+  );
+}

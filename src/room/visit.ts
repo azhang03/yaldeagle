@@ -1,15 +1,18 @@
-// A visit: the eagle jumps to the item, the camera flies down to the close view, the eagle makes
-// its gesture, and the panel builds. The way back flies up again, and the eagle wanders again.
+// The app mode and what the person asks the eagle to do. A visit: the eagle jumps to the item, the
+// camera flies down to the close view, the eagle makes its gesture, and the panel builds. The way
+// back flies up again, and the eagle wanders again. A trip: the eagle runs (or jumps over an item)
+// to a point that the person clicks on the floor.
 import {
   faceAction,
   facingAngle,
   HOP_DURATION,
   jumpAction,
+  runAction,
   TUNING,
   type BodyAction,
 } from '../eagle/actions';
 import type { Animator } from '../eagle/animator';
-import type { Brain } from '../eagle/brain';
+import type { Brain, Obstacle } from '../eagle/brain';
 import { ROOM_BOUNDS, roomPoint } from '../lib/room';
 import { closeView, flight, overview, type CameraView, type OverviewOffset } from '../lib/view';
 import { buildPanel, type PanelBuild } from '../panel/build';
@@ -18,13 +21,14 @@ import type { Exhibit } from './exhibit';
 import type { Gear } from './gear';
 import type { ItemId } from './items';
 import { planVisit } from './plan';
+import { planTrip } from './trip';
 
 /**
- * wander: the brain moves the eagle, and the overview shows. going: the eagle jumps to the item,
- * and the camera flies down. focus: the close view and the panel. leaving: the panel comes down,
- * and the camera flies back.
+ * wander: the brain moves the eagle, and the overview shows. running: the eagle makes a trip to a
+ * clicked point. going: the eagle jumps to the item, and the camera flies down. focus: the close
+ * view and the panel. leaving: the panel comes down, and the camera flies back.
  */
-export type Mode = 'wander' | 'going' | 'focus' | 'leaving';
+export type Mode = 'wander' | 'running' | 'going' | 'focus' | 'leaving';
 
 export interface Visits {
   mode(): Mode;
@@ -32,6 +36,11 @@ export interface Visits {
   open(id: ItemId): Promise<void>;
   /** Ends the visit in focus. */
   close(): Promise<void>;
+  /**
+   * Sends the eagle to a floor point. In wander it starts a trip. During a trip, the eagle goes on
+   * to the new point when the current move ends.
+   */
+  runTo(point: { x: number; z: number }): void;
   /** The camera view for this frame. */
   view(): CameraView;
   update(dt: number): void;
@@ -42,6 +51,8 @@ export interface VisitDeps {
   /** Null with ?manual. Then the eagle does not wander after a visit. */
   readonly brain: Brain | null;
   readonly exhibits: ReadonlyMap<ItemId, Exhibit>;
+  /** The item circles that a trip avoids. */
+  readonly obstacles: readonly Obstacle[];
   /** The gear of an earned item goes on the eagle when its visit lands. */
   readonly gear: Gear;
   /** The panel goes in this element. */
@@ -73,6 +84,9 @@ export function createVisits(deps: VisitDeps): Visits {
   let panel: PanelBuild | null = null;
   /** The items with a full panel build since the page loaded. Later builds are 3 times as fast. */
   const opened = new Set<ItemId>();
+  /** During a trip: the next clicked point, and an item click that waits for the trip to end. */
+  let nextTrip: { x: number; z: number } | null = null;
+  let waitingVisit: ItemId | null = null;
 
   // Eagle actions in order. Each one resolves when it ends. A null action waits for the current
   // body action to end.
@@ -131,6 +145,11 @@ export function createVisits(deps: VisitDeps): Visits {
 
   async function open(id: ItemId): Promise<void> {
     if (mode === 'going' || mode === 'leaving') return;
+    if (mode === 'running') {
+      // The visit starts when the trip ends.
+      waitingVisit = id;
+      return;
+    }
     if (mode === 'focus') {
       if (focus?.exhibit.item.id === id) return;
       await close();
@@ -197,9 +216,15 @@ export function createVisits(deps: VisitDeps): Visits {
     await flyTo(overviewNow, FLY_BACK, false);
     exhibit.setSelected(false);
     focus = null;
+    await wanderAgain();
+  }
 
-    // Face the nearest 45° step. The turn ends at the exact step angle (plus whole turns), so the
-    // next turn of the brain, which starts from the step angle, does not jump.
+  /**
+   * Faces the nearest 45° step and starts the brain again. The turn ends at the exact step angle
+   * (plus whole turns), so the next turn of the brain, which starts from the step angle, does not
+   * jump.
+   */
+  async function wanderAgain(): Promise<void> {
     const pose = animator.pose();
     const step = ((Math.round(pose.yaw / (Math.PI / 4)) % 8) + 8) % 8;
     const turns = Math.round((pose.yaw - facingAngle(step)) / (2 * Math.PI));
@@ -214,5 +239,38 @@ export function createVisits(deps: VisitDeps): Visits {
     mode = 'wander';
   }
 
-  return { mode: currentMode, open, close, view, update };
+  function runTo(point: { x: number; z: number }): void {
+    if (mode === 'running') {
+      nextTrip = point;
+      return;
+    }
+    if (mode !== 'wander') return;
+    mode = 'running';
+    void trip(point);
+  }
+
+  async function trip(first: { x: number; z: number }): Promise<void> {
+    // A rest or a pause stops at once. A hop or a turn ends first.
+    animator.cutIdle();
+    await act(null);
+    let target: { x: number; z: number } | null = first;
+    while (target) {
+      nextTrip = null;
+      const pose = animator.pose();
+      const plan = planTrip(pose, target, ROOM_BOUNDS, deps.obstacles);
+      if (plan) {
+        void act(faceAction(pose.yaw, Math.atan2(plan.to.x - pose.x, plan.to.z - pose.z)));
+        await act(plan.jump ? jumpAction(pose, plan.to) : runAction(pose, plan.to));
+      }
+      target = waitingVisit ? null : nextTrip;
+    }
+    await wanderAgain();
+    if (waitingVisit) {
+      const id = waitingVisit;
+      waitingVisit = null;
+      await open(id);
+    }
+  }
+
+  return { mode: currentMode, open, close, runTo, view, update };
 }
