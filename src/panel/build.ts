@@ -771,10 +771,13 @@ export function buildPanel(
 
   let resolveFinished: () => void = () => {};
   const finished = new Promise<void>((r) => (resolveFinished = r));
-  // A killed run resolves its own promise too. Only the current run ends the build.
+  // A killed run resolves its own promise too. Only the current run ends the build. After that,
+  // the CSS of the finished panel follows the host size, so the observer can stop.
   const follow = (r: Run): void =>
     void r.finished.then(() => {
-      if (r === run) resolveFinished();
+      if (r !== run) return;
+      observer.disconnect();
+      resolveFinished();
     });
   let run = startRun(host, content, speed, onClose);
   follow(run);
