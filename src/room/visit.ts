@@ -46,6 +46,9 @@ export interface Visits {
   update(dt: number): void;
 }
 
+/** A click during a trip. */
+type Pending = { kind: 'point'; point: { x: number; z: number } } | { kind: 'visit'; id: ItemId };
+
 export interface VisitDeps {
   readonly animator: Animator;
   /** Null with ?manual. Then the eagle does not wander after a visit. */
@@ -84,9 +87,17 @@ export function createVisits(deps: VisitDeps): Visits {
   let panel: PanelBuild | null = null;
   /** The items with a full panel build since the page loaded. Later builds are 3 times as fast. */
   const opened = new Set<ItemId>();
-  /** During a trip: the next clicked point, and an item click that waits for the trip to end. */
-  let nextTrip: { x: number; z: number } | null = null;
-  let waitingVisit: ItemId | null = null;
+  /**
+   * During a trip: the newest click, which waits for the current move to end. A floor click and an
+   * item click replace each other.
+   */
+  let pending: Pending | null = null;
+  /** Takes the newest click. A read through a function, because the click can come in an await. */
+  const takePending = (): Pending | null => {
+    const next = pending;
+    pending = null;
+    return next;
+  };
 
   // Eagle actions in order. Each one resolves when it ends. A null action waits for the current
   // body action to end.
@@ -146,8 +157,8 @@ export function createVisits(deps: VisitDeps): Visits {
   async function open(id: ItemId): Promise<void> {
     if (mode === 'going' || mode === 'leaving') return;
     if (mode === 'running') {
-      // The visit starts when the trip ends.
-      waitingVisit = id;
+      // The visit starts when the current move of the trip ends.
+      pending = { kind: 'visit', id };
       return;
     }
     if (mode === 'focus') {
@@ -241,35 +252,42 @@ export function createVisits(deps: VisitDeps): Visits {
 
   function runTo(point: { x: number; z: number }): void {
     if (mode === 'running') {
-      nextTrip = point;
+      pending = { kind: 'point', point };
       return;
     }
     if (mode !== 'wander') return;
     mode = 'running';
-    void trip(point);
+    pending = { kind: 'point', point };
+    void trip();
   }
 
-  async function trip(first: { x: number; z: number }): Promise<void> {
+  async function trip(): Promise<void> {
     // A rest or a pause stops at once. A hop or a turn ends first.
     animator.cutIdle();
     await act(null);
-    let target: { x: number; z: number } | null = first;
-    while (target) {
-      nextTrip = null;
+    // Each loop takes the newest floor click.
+    let next = takePending();
+    while (next?.kind === 'point') {
+      const target = next.point;
       const pose = animator.pose();
       const plan = planTrip(pose, target, ROOM_BOUNDS, deps.obstacles);
       if (plan) {
         void act(faceAction(pose.yaw, Math.atan2(plan.to.x - pose.x, plan.to.z - pose.z)));
         await act(plan.jump ? jumpAction(pose, plan.to) : runAction(pose, plan.to));
       }
-      target = waitingVisit ? null : nextTrip;
+      next = takePending();
+    }
+    if (next?.kind === 'visit') {
+      // The visit turns the eagle itself, so no turn to a 45° step first.
+      mode = 'wander';
+      await open(next.id);
+      return;
     }
     await wanderAgain();
-    if (waitingVisit) {
-      const id = waitingVisit;
-      waitingVisit = null;
-      await open(id);
-    }
+    // A click during the last turn.
+    const late = takePending();
+    if (late?.kind === 'point') runTo(late.point);
+    else if (late?.kind === 'visit') await open(late.id);
   }
 
   return { mode: currentMode, open, close, runTo, view, update };
