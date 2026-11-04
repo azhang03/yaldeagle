@@ -16,6 +16,10 @@ body {
 canvas {
   display: block;
   touch-action: none;
+  /* A long press drags an item. It must not select the page or open the iOS callout. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* The panel host. src/panel/build.ts builds the panel inside it. The right half on a wide screen,

@@ -22,7 +22,7 @@ Options for development. Add them to the address, for example `?bounds&mounts`. 
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `?seed=N`     | Uses the seed N for the random choices. The console shows the seed of each visit. The same seed gives the same moves.                                                                                          |
 | `?manual`     | Turns the brain off. Keys start each action: H hop, T turn left, Shift+T turn right, S squawk, L look, R run. Visit actions: J jump 2 units forward, F face a random angle, G gaze on or off, I tilt, N shake. |
-| `?bounds`     | Draws the room bounds and one circle for each item on the ground. The eagle stays in the bounds and does not land in a circle.                                                                                 |
+| `?bounds`     | Draws the room bounds and one circle around each item on the ground. The eagle stays in the bounds and does not land in a circle. A circle moves with its item.                                                |
 | `?mounts`     | Shows a dot on each mount point of the eagle (where gear attaches).                                                                                                                                            |
 | `?debug`      | Puts `yaldeagle` in the dev console, with `stage`, `eagle`, `animator`, `brain`, `exhibits`, `visits`, and `gear`. Example: `yaldeagle.visits.mode()`                                                          |
 | `?panel=<id>` | Opens the panel of one item at once, without a visit. The ids are in `src/room/items.ts`, for example `?panel=fe`. Esc or × closes it.                                                                         |
@@ -71,13 +71,14 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `src/room/items.ts`          | The item data: place, status, text, and gear. Change the text here. Tests: `items.test.ts`.                                                                                |
 | `src/room/kit.ts`            | The box kit for the item models, and the paint modes (color, grey, ghost, cut).                                                                                            |
 | `src/room/models.ts`         | The 14 item models, and the parts that the eagle can wear on their own.                                                                                                    |
-| `src/room/exhibit.ts`        | One exhibit: the patch, the floor ring, and the floating item with its state look (earned, progress, locked).                                                              |
+| `src/room/exhibit.ts`        | One exhibit: the patch, the floor ring, and the floating item with its state look (earned, progress, locked). It has a place of the moment, which a drag changes.          |
 | `src/room/gear.ts`           | The earned gear on the eagle mounts. It is hidden at the start, and a visit puts it on.                                                                                    |
 | `src/room/plan.ts`           | The visit planner: the camera direction, the eagle spot, and the items to hide. No Three.js. Tests: `plan.test.ts`.                                                        |
 | `src/room/visit.ts`          | The app mode (wander, running, going, focus, leaving), the visit (the jump, the flight down, the gesture, the panel, the way back), and the trip to a clicked floor point. |
+| `src/room/place.ts`          | The limits of a dragged item place. No Three.js. Tests: `place.test.ts`.                                                                                                   |
 | `src/room/trip.ts`           | The trip planner: the end point of a run to a clicked point, and a jump when an item is in the way. No Three.js. Tests: `trip.test.ts`.                                    |
 | `src/room/tooltip.ts`        | The text box at the pointer.                                                                                                                                               |
-| `src/input/pointer.ts`       | Hover, click, and Esc on the canvas, and touch: pan, pinch, and tap.                                                                                                       |
+| `src/input/pointer.ts`       | Hover, click, and Esc on the canvas, the item drag (a mouse drag, or a long press on touch), and touch: pan, pinch, and tap.                                               |
 | `src/input/gestures.ts`      | Tap, pan, and pinch from touch pointer events. No DOM. Tests: `gestures.test.ts`.                                                                                          |
 | `src/panel/content.ts`       | Turns an item into the panel text. No DOM. Tests: `content.test.ts`.                                                                                                       |
 | `src/panel/build.ts`         | Builds the panel like a steel frame building (blueprint, footings, columns, beams, wall panels), with Web Animations.                                                      |
@@ -92,7 +93,7 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `public/`                    | Static files.                                                                                                                                                              |
 | `vite.config.ts`             | Vite and Vitest config.                                                                                                                                                    |
 
-Files in `src/lib/`, `src/room/areas.ts`, `src/room/items.ts`, `src/room/plan.ts`, `src/room/trip.ts`, `src/panel/content.ts`, `src/input/gestures.ts`, `actions.ts`, and `brain.ts` do not import Three.js or use the DOM, so Vitest can test them without a browser.
+Files in `src/lib/`, `src/room/areas.ts`, `src/room/items.ts`, `src/room/plan.ts`, `src/room/place.ts`, `src/room/trip.ts`, `src/panel/content.ts`, `src/input/gestures.ts`, `actions.ts`, and `brain.ts` do not import Three.js or use the DOM, so Vitest can test them without a browser.
 
 ## License
 

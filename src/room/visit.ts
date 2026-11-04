@@ -80,7 +80,6 @@ const AT_SPOT = 0.05;
 
 export function createVisits(deps: VisitDeps): Visits {
   const { animator, brain, exhibits, gear, host, offset } = deps;
-  const items = [...exhibits.values()].map((e) => e.item);
   let mode: Mode = 'wander';
   const currentMode = (): Mode => mode;
   let focus: { exhibit: Exhibit; hide: readonly ItemId[] } | null = null;
@@ -171,7 +170,10 @@ export function createVisits(deps: VisitDeps): Visits {
     if (!exhibit) return;
     const { item } = exhibit;
     mode = 'going';
-    const plan = planVisit(item, items, deps.aspect(), ROOM_BOUNDS);
+    // The items at their places of the moment. The person can drag them.
+    const place = exhibit.place();
+    const live = [...exhibits.values()].map((e) => ({ ...e.item, ...e.place() }));
+    const plan = planVisit({ ...item, ...place }, live, deps.aspect(), ROOM_BOUNDS);
     focus = { exhibit, hide: plan.hide };
     exhibit.setSelected(true);
     for (const hid of plan.hide) exhibits.get(hid)?.setHidden(true);
@@ -191,7 +193,7 @@ export function createVisits(deps: VisitDeps): Visits {
     await Promise.all(moves.map(act));
     animator.setGaze(GAZE);
 
-    const at = roomPoint(item.u, item.v);
+    const at = roomPoint(place.u, place.v);
     await flyTo(() => closeView(at, plan.azimuth, deps.aspect()), FLY_DOWN, true);
     mode = 'focus';
     exhibit.setFocus(true);

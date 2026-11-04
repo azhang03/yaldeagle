@@ -36,10 +36,15 @@ interface Point {
   readonly z: number;
 }
 
+/** A goal at the end of a straight line. `loose`: its hops only need to stay in the bounds. */
+interface Goal extends Point {
+  readonly loose: boolean;
+}
+
 /**
  * Wander: pick a goal in the bounds, turn toward it in 45° steps, and hop to it with short pauses.
- * At the goal, rest and look around, squawk, or pick a new goal. No hop lands outside the bounds
- * or inside an obstacle.
+ * At the goal, rest and look around, squawk, or pick a new goal. No hop lands outside the bounds.
+ * No hop lands inside an obstacle, but for the way out when the eagle stands in one.
  */
 export function createBrain(
   random: Random,
@@ -48,7 +53,7 @@ export function createBrain(
   start: Pose,
 ): Brain {
   let { x, z, facing } = start;
-  let goal: Point | null = null;
+  let goal: Goal | null = null;
   /** A pause comes after each hop and each turn. */
   let pauseNext = false;
   /** True while the current body action is a rest. The head looks around only then. */
@@ -57,10 +62,12 @@ export function createBrain(
   let bodyLeft = 0;
   let lookLeft = Infinity;
 
-  /** True if a hop can land on the point (px, pz). */
-  const fits = (px: number, pz: number): boolean =>
-    boundsContains(bounds, px, pz) &&
+  /** True if the point (px, pz) is outside every obstacle. */
+  const clear = (px: number, pz: number): boolean =>
     obstacles.every((o) => Math.hypot(px - o.x, pz - o.z) >= o.radius);
+  /** True if a hop can land on the point (px, pz). */
+  const fits = (px: number, pz: number): boolean => boundsContains(bounds, px, pz) && clear(px, pz);
+  const inBounds = (px: number, pz: number): boolean => boundsContains(bounds, px, pz);
 
   const between = (min: number, max: number): number => min + random() * (max - min);
 
@@ -89,8 +96,15 @@ export function createBrain(
    * A goal a whole number of hops away in a straight line, so the eagle does not turn on the
    * way. Mostly straight on (TUNING.goal.turn). Each hop on the line fits: inside the bounds and
    * outside every obstacle. Null if no line fits.
+   *
+   * The person can move the items, so the eagle can stand in an item circle with no line that
+   * fits. Then a loose line, which only stays in the bounds, takes it out.
    */
-  function newGoal(): Point | null {
+  function newGoal(): Goal | null {
+    return lineGoal(fits, false) ?? (clear(x, z) ? null : lineGoal(inBounds, true));
+  }
+
+  function lineGoal(ok: (px: number, pz: number) => boolean, loose: boolean): Goal | null {
     const { hops, turn } = TUNING.goal;
     const length = TUNING.hop.length;
     // The weight of each turn size, from 0 to 4 steps. The two sides share the weight.
@@ -102,7 +116,7 @@ export function createBrain(
       let fit = 0;
       while (
         fit < hops.max &&
-        fits(x + step.x * length * (fit + 1), z + step.z * length * (fit + 1))
+        ok(x + step.x * length * (fit + 1), z + step.z * length * (fit + 1))
       ) {
         fit++;
       }
@@ -125,7 +139,7 @@ export function createBrain(
     }
     const count = hops.min + Math.floor(random() * (pick.fit - hops.min + 1));
     const step = facingVector(pick.facing);
-    return { x: x + step.x * length * count, z: z + step.z * length * count };
+    return { x: x + step.x * length * count, z: z + step.z * length * count, loose };
   }
 
   /** With no goal: rest, squawk, or pick a new goal (then it returns null). */
@@ -139,7 +153,7 @@ export function createBrain(
   }
 
   /** One step toward the goal: a turn or a hop. Null if the eagle is at the goal. */
-  function moveToward(target: Point): BodyAction | null {
+  function moveToward(target: Goal): BodyAction | null {
     const dx = target.x - x;
     const dz = target.z - z;
     if (Math.hypot(dx, dz) < TUNING.goal.arrive * TUNING.hop.length) return null;
@@ -152,7 +166,7 @@ export function createBrain(
     const toX = x + step.x * TUNING.hop.length;
     const toZ = z + step.z * TUNING.hop.length;
     // A hop that does not fit becomes a turn, and the goal is dropped.
-    if (!fits(toX, toZ)) {
+    if (!(target.loose ? inBounds : fits)(toX, toZ)) {
       goal = null;
       return turn(random() < 0.5 ? 1 : -1);
     }

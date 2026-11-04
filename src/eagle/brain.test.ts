@@ -154,4 +154,20 @@ describe('brain', () => {
     }
     expect(problems).toEqual([]);
   });
+
+  it('walks out of an item circle that leaves no line that fits', () => {
+    // A circle of radius 4 around the start: each line of 2 to 6 hops (up to 3 units) ends in it.
+    const big: Obstacle[] = [{ ...START, radius: 4 }];
+    for (let seed = 1; seed <= 10; seed++) {
+      const brain = createBrain(createRandom(seed), ROOM_BOUNDS, big, START);
+      let out = -1;
+      for (let t = 0; t < 120 && out < 0; t += 0.02) {
+        brain.update(0.02);
+        const { x, z } = brain.pose();
+        if (!boundsContains(ROOM_BOUNDS, x, z)) throw new Error(`seed ${seed}: left the room`);
+        if (Math.hypot(x - START.x, z - START.z) >= 4) out = t;
+      }
+      expect(out, `seed ${seed}`).toBeGreaterThan(0);
+    }
+  });
 });
