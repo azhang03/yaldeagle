@@ -4,6 +4,7 @@
 import './panel.css';
 import { escapeHtml as esc } from './content';
 import type { PanelContent } from './content';
+import type { StatValues } from '../stats/cs2';
 
 // Layout in px. The build needs room at the sides (scaffold) and at the top (sign).
 const SIDE = 40; // side margin of the panel while it builds
@@ -597,6 +598,15 @@ export interface PanelBuild {
   skip(): void;
   /** Takes the panel down. Resolves when the host is empty. */
   demolish(): Promise<void>;
+  /** Sets the text of the stat boxes (`data-stat`). A rebuild after a resize keeps the text. */
+  fill(values: StatValues): void;
+}
+
+function applyStats(scope: ParentNode, values: StatValues): void {
+  for (const [key, text] of Object.entries(values)) {
+    const box = scope.querySelector(`[data-stat="${key}"]`);
+    if (box) box.textContent = text;
+  }
 }
 
 function startRun(
@@ -604,6 +614,7 @@ function startRun(
   content: PanelContent,
   speed: number,
   onClose: (() => void) | undefined,
+  stats: StatValues,
 ): Run {
   const width = host.clientWidth;
   const height = host.clientHeight;
@@ -625,6 +636,8 @@ function startRun(
   const scroll = el('div', 'pb-scroll', frame);
   const stage = el('div', 'pb-stage', scroll);
   const floorEls = fillStage(stage, content);
+  // Stat text that came before this run, for example before a rebuild after a resize.
+  applyStats(stage, stats);
   const found = el('div', 'pb-found', frame);
   const close = el('button', 'pb-close', frame);
   close.type = 'button';
@@ -779,7 +792,8 @@ export function buildPanel(
       observer.disconnect();
       resolveFinished();
     });
-  let run = startRun(host, content, speed, onClose);
+  const stats: StatValues = {};
+  let run = startRun(host, content, speed, onClose, stats);
   follow(run);
 
   // The finished panel follows the host size in CSS, but the build uses the px size of its start.
@@ -788,7 +802,7 @@ export function buildPanel(
     if (!run.building()) return;
     if (host.clientWidth === run.width && host.clientHeight === run.height) return;
     run.kill();
-    run = startRun(host, content, speed * REBUILD_SPEED, onClose);
+    run = startRun(host, content, speed * REBUILD_SPEED, onClose, stats);
     follow(run);
   });
   observer.observe(host);
@@ -807,6 +821,12 @@ export function buildPanel(
   return {
     finished,
     skip: () => run.skip(),
+    fill(values): void {
+      // A late answer for a panel that a newer panel replaced does nothing.
+      if (live.get(host) !== entry) return;
+      Object.assign(stats, values);
+      applyStats(host, values);
+    },
     demolish(): Promise<void> {
       if (demo) return demo;
       observer.disconnect();
