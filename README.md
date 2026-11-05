@@ -67,6 +67,21 @@ Live site: https://yaldeagle.vercel.app/
 
 The item then shows its colors in the room. If the item has a `worn` entry, the eagle puts that gear on during a visit to the item. The eagle starts each page load with no gear.
 
+## Change the item text
+
+All item text is in `src/room/items.ts`. The panel builds its sections from these fields:
+
+| Field     | Section       | Shows                                                     |
+| --------- | ------------- | --------------------------------------------------------- |
+| `line`    | (under title) | Earned and in progress. A locked item shows a fixed lead. |
+| `what`    | About         | Always.                                                   |
+| `history` | Highlights    | Earned and in progress.                                   |
+| `earn`    | Requirements  | In progress and locked.                                   |
+| `stats`   | Stats         | The CS2 item only.                                        |
+| `worn`    | On the eagle  | Items with gear (`worn.text`).                            |
+
+The text is about Nick, in the third person, like an about-me page. Write facts only. Leave out a year or a detail that is not known, and do not put notes for the team on the page.
+
 ## Code map
 
 | Path                         | Use                                                                                                                                                                                                                          |

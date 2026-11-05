@@ -1,5 +1,6 @@
 // The items in the room. This is the one home of the item data: place, status, text, and gear.
 // To mark a credential as earned, change its `status`. This file has no Three.js and no DOM.
+// The text is about Nick, like an about-me page. Facts only, and no notes to the team.
 import type { MountName } from '../eagle/model';
 import type { AreaId } from './areas';
 
@@ -30,6 +31,8 @@ export interface Worn {
   readonly pos: readonly [number, number, number];
   readonly rot?: readonly [number, number, number];
   readonly scale: number;
+  /** The "On the eagle" text of the panel. */
+  readonly text: string;
 }
 
 /** A best rank that we type in. The icon is a file in public/ranks/, shown at this size in px. */
@@ -50,22 +53,17 @@ export interface ItemDef {
   readonly name: string;
   /** The credential or role. */
   readonly title: string;
-  /** One short line. The panel shows it under the title. */
+  /** One short line. The panel shows it under the title, except while locked. */
   readonly line: string;
-  /** What the credential is. */
+  /** The "About" text. */
   readonly what: string;
-  /** What Nick did. Not shown while locked. */
+  /** The "Highlights": what Nick did. Not shown while locked. */
   readonly history?: readonly string[];
-  /** How he earns it. Not shown after he earns it. */
+  /** The "Requirements". Not shown after he earns it. */
   readonly earn?: readonly string[];
-  /** A fact to check with Nick. */
-  readonly confirm?: string;
   /** Shows the CS2 stats, with these peaks that we type in. The live stats are in src/stats. */
   readonly stats?: { readonly peaks: readonly Peak[] };
-  /** Shows the "Try it" button. */
-  readonly tryIt?: boolean;
-  /** Where the gear goes on the eagle. */
-  readonly wearText: string;
+  /** The gear on the eagle. Only these items have an "On the eagle" section. */
   readonly worn?: Worn;
 }
 
@@ -81,15 +79,18 @@ export const ITEMS: readonly ItemDef[] = [
     u: -4.2,
     v: -3.0,
     status: 'earned',
-    tryIt: true,
     name: 'Hard Hat',
     title: 'FE exam and EIT',
-    line: 'Passed the FE. Now an Engineer in Training.',
-    what: 'The Fundamentals of Engineering (FE) exam is the first exam on the path to a PE license. NCEES writes it. After a pass, the state gives the title Engineer in Training (EIT).',
-    history: ['Passed the FE exam.', 'Earned the EIT title.'],
-    confirm: 'The year he passed.',
-    wearText: 'The hard hat sits on the head.',
-    worn: { mount: 'hat', part: 'model', pos: [0, -0.09, 0.02], scale: 1.1 },
+    line: 'Engineer in Training.',
+    what: 'The Fundamentals of Engineering (FE) exam from NCEES is the first step to a Professional Engineer license. After the pass, the state gives the title Engineer in Training (EIT).',
+    history: ['Passed the FE exam.', 'Earned the Engineer in Training (EIT) title.'],
+    worn: {
+      mount: 'hat',
+      part: 'model',
+      pos: [0, -0.09, 0.02],
+      scale: 1.1,
+      text: 'The eagle wears the hard hat.',
+    },
   },
   {
     id: 'pe',
@@ -97,18 +98,16 @@ export const ITEMS: readonly ItemDef[] = [
     u: -1.3,
     v: -2.6,
     status: 'progress',
-    tryIt: true,
     name: 'The Seal',
     title: 'PE, Civil',
-    line: 'Sign and seal. He is studying for it now.',
-    what: 'The Principles and Practice of Engineering (PE) exam, Civil. With a PE license, an engineer can sign and seal plans. California also asks for its Seismic and Surveying exams.',
-    history: ['Passed the FE first.', 'Studying for the PE now.'],
+    line: 'Next up: sign and seal.',
+    what: 'The Professional Engineer (PE) license lets an engineer sign and seal plans. It takes the NCEES PE Civil exam. In California, it also takes the state Seismic and Surveying exams.',
+    history: ['Passed the FE exam.', 'Studying for the PE Civil exam now.'],
     earn: [
       'Pass the PE Civil exam.',
       'Pass the California Seismic exam.',
       'Pass the California Surveying exam.',
     ],
-    wearText: 'The seal goes on the chest when he earns it.',
   },
   {
     id: 'pls',
@@ -119,9 +118,8 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Tripod',
     title: 'LSIT and PLS',
     line: 'Measure twice.',
-    what: 'The Fundamentals of Surveying (FS) exam gives the LSIT title. The Principles and Practice of Surveying (PS) exam and a state exam give the PLS license. A PLS can sign survey maps.',
+    what: 'The Fundamentals of Surveying (FS) exam gives the title Land Surveyor in Training (LSIT). The Principles and Practice of Surveying (PS) exam and a state exam give the Professional Land Surveyor (PLS) license. A PLS signs survey maps.',
     earn: ['Pass the FS exam for the LSIT.', 'Pass the PS exam and the state exam for the PLS.'],
-    wearText: 'The tripod goes on the back when he earns it.',
   },
   {
     id: 'qsd',
@@ -132,9 +130,8 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Silt Fence',
     title: 'QSD and QSP',
     line: 'Keep the dirt on the site.',
-    what: 'Two roles in the California Construction General Permit. A QSD writes the Stormwater Pollution Prevention Plan (SWPPP). A QSP carries out the plan on the site. CASQA runs the training.',
+    what: 'Two roles in the California Construction General Permit. A Qualified SWPPP Developer (QSD) writes the Stormwater Pollution Prevention Plan. A Qualified SWPPP Practitioner (QSP) carries out the plan on the site. CASQA runs the training.',
     earn: ['Take the CASQA training and pass the exam for each role.'],
-    wearText: 'A rolled wattle goes on the back when he earns it.',
   },
   {
     id: 'leed',
@@ -145,9 +142,8 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Leaf',
     title: 'LEED Green Associate',
     line: 'Green building, step one.',
-    what: 'The first LEED credential. GBCI gives it. It shows that a person knows the basics of green building.',
+    what: 'The first LEED credential, from GBCI. It shows a working knowledge of green building.',
     earn: ['Pass the LEED Green Associate exam.'],
-    wearText: 'The leaf goes on the head, like a feather, when he earns it.',
   },
   {
     id: 'leedap',
@@ -158,13 +154,11 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Tree',
     title: 'LEED AP and LEED Fellow',
     line: 'The leaf grows up.',
-    what: 'LEED AP with a specialty follows the Green Associate. The specialties are BD+C, O+M, ID+C, ND, and Homes. LEED Fellow is the top tier.',
+    what: 'LEED AP comes after the Green Associate, with one specialty: BD+C, O+M, ID+C, ND, or Homes. LEED Fellow is the top tier.',
     earn: [
-      'Pass the exam for one LEED AP specialty.',
-      'For Fellow: a nomination after many years of LEED work.',
+      'Pass the exam for a LEED AP specialty.',
+      'For LEED Fellow: a nomination after years of LEED work.',
     ],
-    confirm: 'Andrew did not remember the name. The room shows every candidate.',
-    wearText: 'In the room only.',
   },
   {
     id: 'storm',
@@ -173,12 +167,10 @@ export const ITEMS: readonly ItemDef[] = [
     v: -6.1,
     status: 'locked',
     name: 'Culvert',
-    title: 'Storm water designer',
+    title: 'Storm water certificates',
     line: 'Where does the rain go?',
-    what: 'EnviroCert gives four candidate certificates: CPSWQ (storm water quality), CPESC (erosion and sediment control), CPMSM (municipal storm water), and CESSWI (inspector).',
-    earn: ['Pass the EnviroCert exam for one of the four.'],
-    confirm: 'Andrew did not remember the name. All four are candidates.',
-    wearText: 'In the room only.',
+    what: 'EnviroCert gives four storm water certificates: CPSWQ (storm water quality), CPESC (erosion and sediment control), CPMSM (municipal storm water), and CESSWI (inspection).',
+    earn: ['Pass the EnviroCert exam for each certificate.'],
   },
   {
     id: 'se',
@@ -189,9 +181,8 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'I-Beam',
     title: 'SE (Structural Engineer)',
     line: 'Almost a career change.',
-    what: 'The Structural Engineer license. It needs the 16-hour NCEES SE exam. This one is a maybe.',
-    earn: ['Pass the NCEES SE exam.', 'Decide to change careers, a little.'],
-    wearText: 'In the room only.',
+    what: 'The Structural Engineer (SE) license. It takes the 16-hour NCEES SE exam.',
+    earn: ['Pass the NCEES SE exam.', 'Change careers, a little.'],
   },
   {
     id: 'work',
@@ -202,10 +193,16 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Blueprints',
     title: 'Civil Engineer, Fuscoe Engineering',
     line: 'On the job since July 2020.',
-    what: 'Nick works as a Civil Engineer at Fuscoe Engineering.',
-    history: ['July 2020: started at Fuscoe Engineering as a Civil Engineer.'],
-    wearText: 'The drawing tube sits on the back.',
-    worn: { mount: 'back', part: 'tube', pos: [0, 0.22, 0.06], rot: [0.25, 0, 0.55], scale: 0.9 },
+    what: 'Nick is a Civil Engineer at Fuscoe Engineering.',
+    history: ['July 2020: joined Fuscoe Engineering as a Civil Engineer.'],
+    worn: {
+      mount: 'back',
+      part: 'tube',
+      pos: [0, 0.22, 0.06],
+      rot: [0.25, 0, 0.55],
+      scale: 0.9,
+      text: 'The eagle carries the drawing tube on its back.',
+    },
   },
   {
     id: 'viewpoint',
@@ -217,9 +214,6 @@ export const ITEMS: readonly ItemDef[] = [
     title: 'Founder, Viewpoint esports',
     line: 'He started the team.',
     what: 'Nick founded the esports program at Viewpoint, his high school.',
-    history: ['Founded the Viewpoint esports program.'],
-    confirm: 'The year he founded it.',
-    wearText: 'In the room only.',
   },
   {
     id: 'bronco',
@@ -231,9 +225,7 @@ export const ITEMS: readonly ItemDef[] = [
     title: 'President, Bronco Esports',
     line: 'Green and gold.',
     what: 'Nick is the president of Bronco Esports, the esports club of Cal Poly Pomona.',
-    history: ['President since 2024 or 2025.'],
-    confirm: 'Since 2024 or 2025?',
-    wearText: 'In the room only.',
+    history: ['President since 2024.'],
   },
   {
     id: 'cs2',
@@ -244,7 +236,7 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Monitor',
     title: 'CS2 stats',
     line: 'Counter-Strike, by the numbers.',
-    what: "A screen with Nick's Counter-Strike 2 stats.",
+    what: 'His CS2 numbers from Leetify, his lifetime totals from Steam, and his best ranks.',
     stats: {
       peaks: [
         {
@@ -259,7 +251,6 @@ export const ITEMS: readonly ItemDef[] = [
         },
       ],
     },
-    wearText: 'In the room only.',
   },
   {
     id: 'kerchief',
@@ -270,10 +261,15 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Neckerchief',
     title: 'Scouting, 2014 to 2021',
     line: 'Be prepared.',
-    what: 'Nick was in Scouting from 2014 to 2021.',
-    history: ['2014 to 2021 in Scouting.'],
-    wearText: 'The neckerchief hangs at the neck.',
-    worn: { mount: 'neck', part: 'kerchief', pos: [0, -0.01, 0], scale: 0.85 },
+    what: 'Nick was a Scout from 2014 to 2021.',
+    history: ['2014: joined Scouting.', '2021: earned the Eagle Scout rank.'],
+    worn: {
+      mount: 'neck',
+      part: 'kerchief',
+      pos: [0, -0.01, 0],
+      scale: 0.85,
+      text: 'The eagle wears the neckerchief.',
+    },
   },
   {
     id: 'eagle',
@@ -284,10 +280,7 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Eagle Medal',
     title: 'Eagle Scout',
     line: 'An eagle, for the eagle.',
-    what: 'Eagle Scout is the highest rank in Scouts BSA.',
-    history: ['Earned the Eagle Scout rank.'],
-    confirm: 'Did he earn the rank? In which year?',
-    wearText: 'In the room only.',
+    what: 'Eagle Scout is the highest rank in Scouts BSA. Nick earned it in 2021.',
   },
   {
     id: 'commission',
@@ -299,7 +292,5 @@ export const ITEMS: readonly ItemDef[] = [
     title: 'Student Commissioner, Calabasas Traffic and Transportation Safety Commission',
     line: 'City of Calabasas, 2019 to 2021.',
     what: 'From 2019 to 2021, Nick served as a Student Commissioner on the Traffic and Transportation Safety Commission of the City of Calabasas.',
-    history: ['2019 to 2021: Student Commissioner, City of Calabasas.'],
-    wearText: 'In the room only.',
   },
 ];

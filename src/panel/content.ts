@@ -13,13 +13,12 @@ export interface PanelContent {
   status: 'earned' | 'progress' | 'locked';
   statusLabel: 'Earned' | 'In progress' | 'Locked';
   lead: string;
-  confirm?: string;
   sections: { heading: string; html: string }[];
-  tryIt: boolean;
 }
 
 const STATUS_LABEL = { earned: 'Earned', progress: 'In progress', locked: 'Locked' } as const;
-const LOCKED_LEAD = 'Nick has not earned this yet.';
+/** The lead of a locked item: a goal on his path, not a gap. */
+const LOCKED_LEAD = 'Not earned yet. It is on his path.';
 /** The Leetify badge from their logo pack (public/leetify/), at its 270 by 112 shape. */
 const LEETIFY_BADGE =
   '<img src="/leetify/data-provided-by-leetify.png" alt="Data provided by Leetify" width="77" height="32">';
@@ -82,13 +81,14 @@ function peakBox(p: Peak): string {
 
 export function panelContent(item: ItemDef): PanelContent {
   const area = AREAS[item.area];
-  const sections = [{ heading: 'What it is', html: `<p>${escapeHtml(item.what)}</p>` }];
+  const sections = [{ heading: 'About', html: `<p>${escapeHtml(item.what)}</p>` }];
   if (item.stats) sections.push({ heading: 'Stats', html: statsHtml(item.stats.peaks) });
   if (item.history && item.status !== 'locked')
-    sections.push({ heading: 'History', html: list(item.history) });
+    sections.push({ heading: 'Highlights', html: list(item.history) });
   if (item.earn && item.status !== 'earned')
-    sections.push({ heading: 'How he earns it', html: list(item.earn) });
-  sections.push({ heading: 'On the eagle', html: `<p>${escapeHtml(item.wearText)}</p>` });
+    sections.push({ heading: 'Requirements', html: list(item.earn) });
+  if (item.worn)
+    sections.push({ heading: 'On the eagle', html: `<p>${escapeHtml(item.worn.text)}</p>` });
   return {
     area: { name: area.name, color: area.color },
     itemName: item.name,
@@ -96,8 +96,6 @@ export function panelContent(item: ItemDef): PanelContent {
     status: item.status,
     statusLabel: STATUS_LABEL[item.status],
     lead: item.status === 'locked' ? LOCKED_LEAD : item.line,
-    confirm: item.confirm,
     sections,
-    tryIt: !!item.tryIt,
   };
 }
