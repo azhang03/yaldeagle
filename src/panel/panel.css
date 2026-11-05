@@ -178,9 +178,20 @@
 .pb-sec ul {
   padding-left: 18px;
 }
+.pb-stat-group + .pb-stat-group {
+  margin-top: 12px;
+}
+.pb-stat-group h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #444;
+}
+/* One row of boxes for each group. The boxes keep their size when the values come in. */
 .pb-sec .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 6px;
 }
 .pb-sec .stats div {
@@ -192,15 +203,34 @@
 .pb-sec .stats b {
   display: block;
   font-size: 18px;
+  white-space: nowrap;
 }
 .pb-sec .stats span {
   font-size: 12px;
   color: #888;
 }
-.pb-sec .stats + .small {
-  margin-top: 0;
+.pb-sec .pb-credit {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #888;
 }
-.pb-sec .small,
+.pb-credit img {
+  display: block;
+}
+.pb-credit a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+}
+/* Leetify's rule for the link to their data: bold, in their pink. */
+.pb-credit a.pb-leetify {
+  color: #f84982;
+  font-weight: 700;
+}
 .pb-small {
   font-size: 12px;
   color: #888;
@@ -325,7 +355,6 @@
 .pb-locked .pb-title {
   color: #2e2010;
 }
-.pb-locked .pb-sec .small,
 .pb-locked .pb-small {
   color: #6b5030;
 }

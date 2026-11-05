@@ -11,6 +11,7 @@ import { ROOM_BOUNDS, roomCoords, roomPoint } from './lib/room';
 import { clampOffset, panBy, startOffset, zoomAt } from './lib/view';
 import { buildPanel } from './panel/build';
 import { panelContent } from './panel/content';
+import { loadCs2, watchCs2 } from './stats/cs2';
 import { createExhibit } from './room/exhibit';
 import { createGear } from './room/gear';
 import { ITEM_CLEARANCE, ITEMS } from './room/items';
@@ -60,6 +61,9 @@ const offset = startOffset(stage.aspect());
 
 const host = document.querySelector<HTMLElement>('#panel-host');
 if (!host) throw new Error('The page has no #panel-host element.');
+
+// The CS2 stats load once at the start, so the monitor panel usually has them at once.
+loadCs2();
 
 const visits = createVisits({
   animator,
@@ -129,6 +133,7 @@ if (panelId !== null) {
       speed: params.has('slow') ? 0.25 : 1,
       onClose: close,
     });
+    if (item.stats) watchCs2(panel.fill);
     addEventListener('keydown', (event) => {
       if (event.key === 'Escape') close();
     });

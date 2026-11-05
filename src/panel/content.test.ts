@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ITEMS } from '../room/items';
 import type { ItemDef, ItemId } from '../room/items';
+import { STAT_KEYS } from '../stats/cs2';
 import { panelContent } from './content';
 
 function item(id: ItemId): ItemDef {
@@ -30,6 +31,16 @@ describe('panelContent', () => {
 
   it('gives the cs2 sections', () => {
     expect(headings('cs2')).toEqual(['What it is', 'Stats', 'On the eagle']);
+  });
+
+  it('gives a box for each stat that the loader fills, and escapes the peaks', () => {
+    const cs2 = item('cs2');
+    const html = panelContent({
+      ...cs2,
+      stats: { peaks: [{ label: 'A & B', value: '<b>' }] },
+    }).sections.find((s) => s.heading === 'Stats')?.html;
+    for (const key of STAT_KEYS) expect(html).toContain(`data-stat="${key}"`);
+    expect(html).toContain('<b>&lt;b&gt;</b><span>A &amp; B</span>');
   });
 
   it('gives the work sections without the try button', () => {

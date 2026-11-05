@@ -17,6 +17,7 @@ import { ROOM_BOUNDS, roomPoint } from '../lib/room';
 import { closeView, flight, overview, type CameraView, type OverviewOffset } from '../lib/view';
 import { buildPanel, type PanelBuild } from '../panel/build';
 import { panelContent } from '../panel/content';
+import { watchCs2 } from '../stats/cs2';
 import type { Exhibit } from './exhibit';
 import type { Gear } from './gear';
 import type { ItemId } from './items';
@@ -213,7 +214,9 @@ export function createVisits(deps: VisitDeps): Visits {
     }
     const speed = (opened.has(id) ? 3 : 1) * (deps.slow ? 0.25 : 1);
     opened.add(id);
-    panel = buildPanel(host, panelContent(item), { speed, onClose: () => void close() });
+    const built = buildPanel(host, panelContent(item), { speed, onClose: () => void close() });
+    if (item.stats) watchCs2(built.fill);
+    panel = built;
   }
 
   async function close(): Promise<void> {

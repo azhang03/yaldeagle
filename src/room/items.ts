@@ -53,8 +53,10 @@ export interface ItemDef {
   readonly earn?: readonly string[];
   /** A fact to check with Nick. */
   readonly confirm?: string;
-  /** Shows the stats layout. */
-  readonly stats?: boolean;
+  /** Shows the CS2 stats, with these peaks that we type in. The live stats are in src/stats. */
+  readonly stats?: {
+    readonly peaks: readonly { readonly label: string; readonly value: string }[];
+  };
   /** Shows the "Try it" button. */
   readonly tryIt?: boolean;
   /** Where the gear goes on the eagle. */
@@ -236,10 +238,14 @@ export const ITEMS: readonly ItemDef[] = [
     status: 'earned',
     name: 'Monitor',
     title: 'CS2 stats',
-    line: 'Live numbers, later.',
+    line: 'Counter-Strike, by the numbers.',
     what: "A screen with Nick's Counter-Strike 2 stats.",
-    stats: true,
-    confirm: 'The data source: a file that we update by hand, the Steam Web API, or FACEIT.',
+    stats: {
+      peaks: [
+        { label: 'CS:GO', value: 'Global Elite' },
+        { label: 'FACEIT', value: 'Level 10' },
+      ],
+    },
     wearText: 'In the room only.',
   },
   {
