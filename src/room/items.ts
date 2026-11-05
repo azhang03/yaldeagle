@@ -17,7 +17,8 @@ export type ItemId =
   | 'bronco'
   | 'cs2'
   | 'kerchief'
-  | 'eagle';
+  | 'eagle'
+  | 'commission';
 
 export type ItemStatus = 'earned' | 'progress' | 'locked';
 
@@ -243,7 +244,7 @@ export const ITEMS: readonly ItemDef[] = [
   },
   {
     id: 'kerchief',
-    area: 'scouts',
+    area: 'extracurriculars',
     u: -2.0,
     v: 4.2,
     status: 'earned',
@@ -257,7 +258,7 @@ export const ITEMS: readonly ItemDef[] = [
   },
   {
     id: 'eagle',
-    area: 'scouts',
+    area: 'extracurriculars',
     u: 0.9,
     v: 4.8,
     status: 'earned',
@@ -267,6 +268,19 @@ export const ITEMS: readonly ItemDef[] = [
     what: 'Eagle Scout is the highest rank in Scouts BSA.',
     history: ['Earned the Eagle Scout rank.'],
     confirm: 'Did he earn the rank? In which year?',
+    wearText: 'In the room only.',
+  },
+  {
+    id: 'commission',
+    area: 'extracurriculars',
+    u: -4.8,
+    v: 3.6,
+    status: 'earned',
+    name: 'Traffic Light',
+    title: 'Student Commissioner, Calabasas Traffic and Transportation Safety Commission',
+    line: 'City of Calabasas, 2019 to 2021.',
+    what: 'From 2019 to 2021, Nick served as a Student Commissioner on the Traffic and Transportation Safety Commission of the City of Calabasas.',
+    history: ['2019 to 2021: Student Commissioner, City of Calabasas.'],
     wearText: 'In the room only.',
   },
 ];

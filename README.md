@@ -1,6 +1,6 @@
 # Yaldeagle
 
-Yaldeagle is a small 3D toy for the browser, made for Nicholas Yalda. Nicholas is a civil engineer, and he wants every license and certificate he can get. A blocky eagle in the style of Crossy Road wanders a white room with 14 items about Nick: his licenses and certificates, his work, esports, and Scouting.
+Yaldeagle is a small 3D toy for the browser, made for Nicholas Yalda. Nicholas is a civil engineer, and he wants every license and certificate he can get. A blocky eagle in the style of Crossy Road wanders a white room with 15 items about Nick: his licenses and certificates, his work, esports, and his extracurriculars.
 
 - Click an item: the eagle jumps to it, the camera flies down, and a panel tells what the item stands for. A visit to an earned item puts its gear on the eagle. Esc, ×, or a click on the floor goes back.
 - Click the floor: the eagle runs there, or jumps over an item in the way.
@@ -75,7 +75,7 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `src/room/areas.ts`          | The four areas of the room and their colors.                                                                                                                               |
 | `src/room/items.ts`          | The item data: place, status, text, and gear. Change the text here. Tests: `items.test.ts`.                                                                                |
 | `src/room/kit.ts`            | The box kit for the item models, and the paint modes (color, grey, ghost, cut).                                                                                            |
-| `src/room/models.ts`         | The 14 item models, and the parts that the eagle can wear on their own.                                                                                                    |
+| `src/room/models.ts`         | The 15 item models, and the parts that the eagle can wear on their own.                                                                                                    |
 | `src/room/exhibit.ts`        | One exhibit: the patch, the floor ring, and the floating item with its state look (earned, progress, locked). It has a place of the moment, which a drag changes.          |
 | `src/room/gear.ts`           | The earned gear on the eagle mounts. It is hidden at the start, and a visit puts it on.                                                                                    |
 | `src/room/plan.ts`           | The visit planner: the camera direction, the eagle spot, and the items to hide. No Three.js. Tests: `plan.test.ts`.                                                        |
