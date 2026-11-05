@@ -242,8 +242,8 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Pennant',
     title: 'President, Bronco Esports',
     line: 'Green and gold.',
-    what: 'Nick is the president of Bronco Esports, the esports club of Cal Poly Pomona.',
-    history: ['President since 2024.'],
+    what: 'Nick was the president of Bronco Esports, the esports club of Cal Poly Pomona.',
+    history: ['2024 to 2025: President of Bronco Esports.'],
   },
   {
     id: 'cs2',
