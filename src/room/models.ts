@@ -176,4 +176,16 @@ export const MODELS: Readonly<Record<ItemId, (k: Kit) => void>> = {
     k.box([0.05, 0.05, 0.03], [0, 0.37, -0.002], '#dfe2e6');
     k.box([0.16, 0.03, 0.03], [0, 0.2, -0.004], '#e8e2cf');
   },
+  // Traffic light: a yellow signal head on a pole, with red, yellow, and green lamps.
+  commission(k) {
+    k.box([0.22, 0.05, 0.22], [0, 0.025, 0], '#3a3a3c');
+    k.cyl(0.025, 0.36, [0, 0.23, 0], '#8d9196');
+    k.box([0.15, 0.36, 0.1], [0, 0.57, 0], '#d9a520');
+    k.box([0.12, 0.33, 0.01], [0, 0.57, 0.052], '#1f2226');
+    ['#ff4136', '#ffb000', '#2ecc40'].forEach((c, i) => {
+      const y = 0.68 - i * 0.11;
+      k.cyl(0.04, 0.02, [0, y, 0.065], c, [Math.PI / 2, 0, 0]);
+      k.box([0.1, 0.012, 0.05], [0, y + 0.048, 0.08], '#1f2226');
+    });
+  },
 };
