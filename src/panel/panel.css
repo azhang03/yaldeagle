@@ -205,6 +205,12 @@
   font-size: 18px;
   white-space: nowrap;
 }
+/* A rank icon next to a peak. */
+.pb-sec .stats b img {
+  display: inline-block;
+  vertical-align: -4px;
+  margin-right: 6px;
+}
 .pb-sec .stats span {
   font-size: 12px;
   color: #888;

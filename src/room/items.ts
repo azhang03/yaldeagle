@@ -32,6 +32,13 @@ export interface Worn {
   readonly scale: number;
 }
 
+/** A best rank that we type in. The icon is a file in public/ranks/, shown at this size in px. */
+export interface Peak {
+  readonly label: string;
+  readonly value: string;
+  readonly icon?: { readonly src: string; readonly width: number; readonly height: number };
+}
+
 export interface ItemDef {
   readonly id: ItemId;
   readonly area: AreaId;
@@ -54,9 +61,7 @@ export interface ItemDef {
   /** A fact to check with Nick. */
   readonly confirm?: string;
   /** Shows the CS2 stats, with these peaks that we type in. The live stats are in src/stats. */
-  readonly stats?: {
-    readonly peaks: readonly { readonly label: string; readonly value: string }[];
-  };
+  readonly stats?: { readonly peaks: readonly Peak[] };
   /** Shows the "Try it" button. */
   readonly tryIt?: boolean;
   /** Where the gear goes on the eagle. */
@@ -242,8 +247,16 @@ export const ITEMS: readonly ItemDef[] = [
     what: "A screen with Nick's Counter-Strike 2 stats.",
     stats: {
       peaks: [
-        { label: 'CS:GO', value: 'Global Elite' },
-        { label: 'FACEIT', value: 'Level 10' },
+        {
+          label: 'CS:GO',
+          value: 'Global Elite',
+          icon: { src: '/ranks/csgo-global-elite.png', width: 54, height: 22 },
+        },
+        {
+          label: 'FACEIT',
+          value: 'Level 10',
+          icon: { src: '/ranks/faceit-level-10.svg', width: 22, height: 22 },
+        },
       ],
     },
     wearText: 'In the room only.',

@@ -1,7 +1,7 @@
 // The panel text for one item. This file has no DOM and no Three.js.
 // Section html escapes each item string. The plain fields are escaped when the panel renders.
 import { AREAS } from '../room/areas';
-import type { ItemDef } from '../room/items';
+import type { ItemDef, Peak } from '../room/items';
 import type { StatKey } from '../stats/cs2';
 import { LEETIFY_HOME, LEETIFY_PROFILE } from '../stats/leetify';
 import { STEAM_PROFILE } from '../stats/steam';
@@ -48,7 +48,7 @@ const box = (key: StatKey, label: string): string =>
   `<div><b data-stat="${key}">--</b><span>${label}</span></div>`;
 
 /** Three groups: CS2 from Leetify, lifetime totals from Steam, and the peaks from the item. */
-function statsHtml(peaks: NonNullable<ItemDef['stats']>['peaks']): string {
+function statsHtml(peaks: readonly Peak[]): string {
   const group = (heading: string, boxes: string, foot = ''): string =>
     `<div class="pb-stat-group"><h4>${heading}</h4><div class="stats">${boxes}</div>${foot}</div>`;
   return (
@@ -68,14 +68,18 @@ function statsHtml(peaks: NonNullable<ItemDef['stats']>['peaks']): string {
         box('hours', 'Hours'),
       `<p class="pb-credit">Steam totals, with his CS:GO years. ${link(STEAM_PROFILE, 'Steam profile')}</p>`,
     ) +
-    group(
-      'Peaks',
-      peaks
-        .map((p) => `<div><b>${escapeHtml(p.value)}</b><span>${escapeHtml(p.label)}</span></div>`)
-        .join(''),
-    )
+    group('Peaks', peaks.map(peakBox).join(''))
   );
 }
+
+/** A peak: the rank icon (if any) next to the rank, and the label under them. */
+function peakBox(p: Peak): string {
+  const icon = p.icon
+    ? `<img src="${escapeHtml(p.icon.src)}" alt="" width="${p.icon.width}" height="${p.icon.height}">`
+    : '';
+  return `<div><b>${icon}${escapeHtml(p.value)}</b><span>${escapeHtml(p.label)}</span></div>`;
+}
+
 export function panelContent(item: ItemDef): PanelContent {
   const area = AREAS[item.area];
   const sections = [{ heading: 'What it is', html: `<p>${escapeHtml(item.what)}</p>` }];
