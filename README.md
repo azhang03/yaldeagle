@@ -107,7 +107,7 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `src/eagle/brain.ts`         | Decides the next action. It keeps the eagle in the room bounds and off the items, and it can restart from a new pose. No Three.js and no DOM. Tests: `brain.test.ts`.      |
 | `src/eagle/animator.ts`      | Plays the actions on the eagle's parts, with the gaze for visits.                                                                                                          |
 | `src/eagle/manual-keys.ts`   | The keys for `?manual`.                                                                                                                                                    |
-| `public/`                    | Static files, with the Leetify badge from their logo pack (`public/leetify/`).                                                                                             |
+| `public/`                    | Static files: the Leetify badge from their logo pack (`public/leetify/`), and the rank icons of the CS2 peaks (`public/ranks/`).                                           |
 | `vite.config.ts`             | Vite and Vitest config, and the dev route for `/api/steam`.                                                                                                                |
 | `tsconfig.node.json`         | The type check for `api/` and `vite.config.ts`, with Node types.                                                                                                           |
 
