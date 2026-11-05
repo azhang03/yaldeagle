@@ -37,7 +37,7 @@ export interface Worn {
 
 /**
  * A best rank that we type in. The files are in public/ranks/. An icon shows next to the rank, at
- * this size in px. A badge is the background of the rank text, as the Premier rating in the game.
+ * this size in px. A badge is the background of the rank text, like the Premier rating in the game.
  */
 export interface Peak {
   readonly label: string;
