@@ -48,8 +48,8 @@ const box = (key: StatKey, label: string): string =>
 
 /** Three groups: CS2 from Leetify, lifetime totals from Steam, and the peaks from the item. */
 function statsHtml(peaks: readonly Peak[]): string {
-  const group = (heading: string, boxes: string, foot = ''): string =>
-    `<div class="pb-stat-group"><h4>${heading}</h4><div class="stats">${boxes}</div>${foot}</div>`;
+  const group = (heading: string, boxes: string, foot = '', cls = 'stats'): string =>
+    `<div class="pb-stat-group"><h4>${heading}</h4><div class="${cls}">${boxes}</div>${foot}</div>`;
   return (
     group(
       'CS2',
@@ -67,16 +67,19 @@ function statsHtml(peaks: readonly Peak[]): string {
         box('hours', 'Hours'),
       `<p class="pb-credit">Steam totals, with his CS:GO years. ${link(STEAM_PROFILE, 'Steam profile')}</p>`,
     ) +
-    group('Peaks', peaks.map(peakBox).join(''))
+    group('Peaks', peaks.map(peakRow).join(''), '', 'stats peaks')
   );
 }
 
-/** A peak: the rank icon (if any) next to the rank, and the label under them. */
-function peakBox(p: Peak): string {
+/** A peak row: the rank with its icon or badge, and the label. */
+function peakRow(p: Peak): string {
   const icon = p.icon
     ? `<img src="${escapeHtml(p.icon.src)}" alt="" width="${p.icon.width}" height="${p.icon.height}">`
     : '';
-  return `<div><b>${icon}${escapeHtml(p.value)}</b><span>${escapeHtml(p.label)}</span></div>`;
+  const value = p.badge
+    ? `<span class="pb-badge" style="background-image: url('${escapeHtml(p.badge)}')">${escapeHtml(p.value)}</span>`
+    : escapeHtml(p.value);
+  return `<div><b>${icon}${value}</b><span>${escapeHtml(p.label)}</span></div>`;
 }
 
 export function panelContent(item: ItemDef): PanelContent {

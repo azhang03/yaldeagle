@@ -197,15 +197,39 @@
   font-size: 18px;
   white-space: nowrap;
 }
-/* A rank icon next to a peak. */
-.pb-sec .stats b img {
-  display: inline-block;
-  vertical-align: -4px;
-  margin-right: 6px;
-}
 .pb-sec .stats span {
   font-size: 12px;
   color: #888;
+}
+/* Peaks: one row for each rank, the rank at the left and the label at the right. */
+.pb-sec .stats.peaks {
+  grid-auto-flow: row;
+}
+.pb-sec .stats.peaks div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+}
+.pb-sec .stats.peaks b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+}
+/* The Premier rating: the number on its tier badge, as in the game. */
+.pb-sec .stats .pb-badge {
+  box-sizing: border-box;
+  min-width: 112px;
+  height: 26px;
+  padding: 0 22px 0 24px;
+  background: center / 100% 100% no-repeat;
+  color: #fff;
+  font-size: 16px;
+  font-style: italic;
+  line-height: 26px;
+  text-align: right;
 }
 .pb-sec .pb-credit {
   display: flex;

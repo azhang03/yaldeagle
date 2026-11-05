@@ -35,11 +35,15 @@ export interface Worn {
   readonly text: string;
 }
 
-/** A best rank that we type in. The icon is a file in public/ranks/, shown at this size in px. */
+/**
+ * A best rank that we type in. The files are in public/ranks/. An icon shows next to the rank, at
+ * this size in px. A badge is the background of the rank text, as the Premier rating in the game.
+ */
 export interface Peak {
   readonly label: string;
   readonly value: string;
   readonly icon?: { readonly src: string; readonly width: number; readonly height: number };
+  readonly badge?: string;
 }
 
 export interface ItemDef {
@@ -203,9 +207,12 @@ export const ITEMS: readonly ItemDef[] = [
     status: 'earned',
     name: 'Blueprints',
     title: 'Civil Engineer, Fuscoe Engineering',
-    line: 'On the job since July 2020.',
-    what: 'Nick is a Civil Engineer at Fuscoe Engineering.',
-    history: ['July 2020: joined Fuscoe Engineering as a Civil Engineer.'],
+    line: 'At Fuscoe since July 2020.',
+    what: 'Nick is a Civil Engineer at Fuscoe Engineering. He started there as an intern in July 2020, and he became a full-time Civil Engineer after he graduated in May 2025.',
+    history: [
+      'July 2020: joined Fuscoe Engineering as an intern.',
+      'May 2025: graduated, then became a full-time Civil Engineer.',
+    ],
     worn: {
       mount: 'back',
       part: 'tube',
@@ -260,6 +267,7 @@ export const ITEMS: readonly ItemDef[] = [
           value: 'Level 10',
           icon: { src: '/ranks/faceit-level-10.svg', width: 22, height: 22 },
         },
+        { label: 'Premier', value: '25,500', badge: '/ranks/premier-red.svg' },
       ],
     },
   },
