@@ -82,7 +82,7 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Hard Hat',
     title: 'FE exam and EIT',
     line: 'Engineer in Training.',
-    what: 'The Fundamentals of Engineering (FE) exam from NCEES is the first step to a Professional Engineer license. After the pass, the state gives the title Engineer in Training (EIT).',
+    what: 'The Fundamentals of Engineering (FE) exam from NCEES is the first step to a Professional Engineer license. After the pass, the state board grants the title Engineer in Training (EIT).',
     history: ['Passed the FE exam.', 'Earned the Engineer in Training (EIT) title.'],
     worn: {
       mount: 'hat',
@@ -107,6 +107,7 @@ export const ITEMS: readonly ItemDef[] = [
       'Pass the PE Civil exam.',
       'Pass the California Seismic exam.',
       'Pass the California Surveying exam.',
+      "Meet the state board's experience rule.",
     ],
   },
   {
@@ -119,7 +120,11 @@ export const ITEMS: readonly ItemDef[] = [
     title: 'LSIT and PLS',
     line: 'Measure twice.',
     what: 'The Fundamentals of Surveying (FS) exam gives the title Land Surveyor in Training (LSIT). The Principles and Practice of Surveying (PS) exam and a state exam give the Professional Land Surveyor (PLS) license. A PLS signs survey maps.',
-    earn: ['Pass the FS exam for the LSIT.', 'Pass the PS exam and the state exam for the PLS.'],
+    earn: [
+      'Pass the FS exam for the LSIT.',
+      'Pass the PS exam and the state exam for the PLS.',
+      "Meet the state board's experience rule.",
+    ],
   },
   {
     id: 'qsd',
@@ -131,7 +136,10 @@ export const ITEMS: readonly ItemDef[] = [
     title: 'QSD and QSP',
     line: 'Keep the dirt on the site.',
     what: 'Two roles in the California Construction General Permit. A Qualified SWPPP Developer (QSD) writes the Stormwater Pollution Prevention Plan. A Qualified SWPPP Practitioner (QSP) carries out the plan on the site. CASQA runs the training.',
-    earn: ['Take the CASQA training and pass the exam for each role.'],
+    earn: [
+      'Hold a qualifying license or certificate for each role.',
+      'Take the CASQA training and pass the exam for each role.',
+    ],
   },
   {
     id: 'leed',
@@ -169,8 +177,11 @@ export const ITEMS: readonly ItemDef[] = [
     name: 'Culvert',
     title: 'Storm water certificates',
     line: 'Where does the rain go?',
-    what: 'EnviroCert gives four storm water certificates: CPSWQ (storm water quality), CPESC (erosion and sediment control), CPMSM (municipal storm water), and CESSWI (inspection).',
-    earn: ['Pass the EnviroCert exam for each certificate.'],
+    what: 'Four storm water certificates from EnviroCert: CPSWQ (storm water quality), CPESC (erosion and sediment control), CPMSM (municipal storm water), and CESSWI (inspection).',
+    earn: [
+      'Meet the education and experience rule of the certificate.',
+      'Pass the EnviroCert exam for the certificate.',
+    ],
   },
   {
     id: 'se',
