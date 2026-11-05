@@ -5,7 +5,7 @@
 import { STEAM_ID } from './steam';
 
 export const LEETIFY_URL = `https://api-public.cs-prod.leetify.com/v3/profile?steam64_id=${STEAM_ID}`;
-export const LEETIFY_PROFILE = `https://leetify.com/app/profile/${STEAM_ID}`;
+export const LEETIFY_PROFILE = `https://leetify.com/public/profile/${STEAM_ID}`;
 export const LEETIFY_HOME = 'https://leetify.com/';
 
 export interface LeetifyStats {

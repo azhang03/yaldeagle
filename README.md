@@ -21,6 +21,14 @@ npm run dev
 
 Then open the address that Vite prints.
 
+The CS2 panel reads Nick's lifetime stats from Steam through the route `/api/steam`. The route needs a Steam Web API key (https://steamcommunity.com/dev/apikey). For the dev server, put it in `.env.local` (git ignores the file):
+
+```sh
+STEAM_API_KEY=your-key
+```
+
+Without the key, the Lifetime boxes show dashes, and the rest of the site works.
+
 Options for development. Add them to the address, for example `?bounds&mounts`. They also work on the live site.
 
 | Option        | What it does                                                                                                                                                                                                   |
@@ -35,18 +43,18 @@ Options for development. Add them to the address, for example `?bounds&mounts`. 
 
 ## Scripts
 
-| Script            | What it does                                             |
-| ----------------- | -------------------------------------------------------- |
-| `npm run dev`     | Starts the dev server with hot reload.                   |
-| `npm run build`   | Type-checks the code, then builds the site into `dist/`. |
-| `npm run preview` | Serves the built site from `dist/`.                      |
-| `npm test`        | Runs the unit tests once with Vitest.                    |
-| `npm run check`   | Runs the type check and the format check.                |
-| `npm run format`  | Formats all files with Prettier.                         |
+| Script            | What it does                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| `npm run dev`     | Starts the dev server with hot reload.                                                          |
+| `npm run build`   | Type-checks the code, then builds the site into `dist/`.                                        |
+| `npm run preview` | Serves the built site from `dist/`.                                                             |
+| `npm test`        | Runs the unit tests once with Vitest.                                                           |
+| `npm run check`   | Runs the type checks (the page, and `api/` with `vite.config.ts` in Node) and the format check. |
+| `npm run format`  | Formats all files with Prettier.                                                                |
 
 ## Deploy
 
-Vercel builds the site from GitHub. A push to `main` deploys to production. Each other branch and each pull request gets a preview link.
+Vercel builds the site from GitHub. A push to `main` deploys to production. Each other branch and each pull request gets a preview link. Vercel runs `api/steam.ts` as a function. It reads `STEAM_API_KEY` from the project settings (Production and Preview).
 
 CI (`.github/workflows/check.yml`) runs the checks, the tests, and the build on each pull request and each push to `main`.
 
@@ -88,6 +96,10 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `src/panel/content.ts`       | Turns an item into the panel text. No DOM. Tests: `content.test.ts`.                                                                                                       |
 | `src/panel/build.ts`         | Builds the panel like a steel frame building (blueprint, footings, columns, beams, wall panels), with Web Animations.                                                      |
 | `src/panel/panel.css`        | The panel style.                                                                                                                                                           |
+| `src/stats/steam.ts`         | Nick's lifetime stats from the Steam Web API: the server call with the key, and the summary. No DOM. Tests: `stats.test.ts`.                                               |
+| `src/stats/leetify.ts`       | Nick's CS2 stats from the Leetify public API. No DOM. Tests: `stats.test.ts`.                                                                                              |
+| `src/stats/cs2.ts`           | Loads both sources once for each page load, in memory only (a Leetify rule), and makes the text of the stat boxes. No DOM. Tests: `stats.test.ts`.                         |
+| `api/steam.ts`               | The Vercel function for `/api/steam`. The dev server serves the same route (`vite.config.ts`).                                                                             |
 | `src/eagle/model.ts`         | `buildEagle()`: the eagle from boxes, with its part tree (legs and body turn at the hips) and mount points.                                                                |
 | `src/eagle/palette.ts`       | The colors of the eagle.                                                                                                                                                   |
 | `src/eagle/mount-markers.ts` | The dots for `?mounts`.                                                                                                                                                    |
@@ -95,10 +107,11 @@ The item then shows its colors in the room. If the item has a `worn` entry, the 
 | `src/eagle/brain.ts`         | Decides the next action. It keeps the eagle in the room bounds and off the items, and it can restart from a new pose. No Three.js and no DOM. Tests: `brain.test.ts`.      |
 | `src/eagle/animator.ts`      | Plays the actions on the eagle's parts, with the gaze for visits.                                                                                                          |
 | `src/eagle/manual-keys.ts`   | The keys for `?manual`.                                                                                                                                                    |
-| `public/`                    | Static files.                                                                                                                                                              |
-| `vite.config.ts`             | Vite and Vitest config.                                                                                                                                                    |
+| `public/`                    | Static files, with the Leetify badge from their logo pack (`public/leetify/`).                                                                                             |
+| `vite.config.ts`             | Vite and Vitest config, and the dev route for `/api/steam`.                                                                                                                |
+| `tsconfig.node.json`         | The type check for `api/` and `vite.config.ts`, with Node types.                                                                                                           |
 
-Files in `src/lib/`, `src/room/areas.ts`, `src/room/items.ts`, `src/room/plan.ts`, `src/room/place.ts`, `src/room/trip.ts`, `src/panel/content.ts`, `src/input/gestures.ts`, `actions.ts`, and `brain.ts` do not import Three.js or use the DOM, so Vitest can test them without a browser.
+Files in `src/lib/`, `src/stats/`, `src/room/areas.ts`, `src/room/items.ts`, `src/room/plan.ts`, `src/room/place.ts`, `src/room/trip.ts`, `src/panel/content.ts`, `src/input/gestures.ts`, `actions.ts`, and `brain.ts` do not import Three.js or use the DOM, so Vitest can test them without a browser.
 
 ## License
 

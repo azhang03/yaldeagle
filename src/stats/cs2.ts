@@ -18,8 +18,11 @@ export type StatKey = (typeof STAT_KEYS)[number];
 /** The box text for each stat that has data. A box with no entry keeps its dashes. */
 export type StatValues = Partial<Record<StatKey, string>>;
 
-/** A source that fails or takes longer than this gives no data. */
-const TIMEOUT_MS = 8000;
+/**
+ * A source that fails or takes longer than this gives no data. It is longer than the server's
+ * 8 s wait for Steam, so a slow Steam answer that the server gets still reaches the page.
+ */
+const TIMEOUT_MS = 12000;
 
 const count = (n: number): string => Math.round(n).toLocaleString('en-US');
 const percent = (share: number): string => `${Math.round(share * 100)}%`;
@@ -30,12 +33,15 @@ function values(pairs: readonly [StatKey, number | null, (n: number) => string][
   return out;
 }
 
-/** Leetify values as the Leetify app shows them: Aim on its 0 to 100 scale with no unit. */
+/**
+ * Leetify values as the Leetify app shows them: the rating with its sign (+3.17), and Aim on its
+ * 0 to 100 scale with no unit.
+ */
 export function leetifyValues(s: LeetifyStats): StatValues {
   return values([
     ['cs2Matches', s.matches, count],
     ['cs2WinRate', s.winRate, percent],
-    ['cs2Rating', s.rating, (n) => n.toFixed(2)],
+    ['cs2Rating', s.rating, (n) => `${n > 0 ? '+' : ''}${n.toFixed(2)}`],
     ['cs2Aim', s.aim, (n) => String(Math.round(n))],
   ]);
 }

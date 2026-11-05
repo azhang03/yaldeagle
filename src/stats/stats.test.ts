@@ -59,7 +59,7 @@ describe('leetifyStats', () => {
     expect(leetifyValues(s)).toEqual({
       cs2Matches: '1,967',
       cs2WinRate: '48%',
-      cs2Rating: '3.17',
+      cs2Rating: '+3.17',
       cs2Aim: '92',
     });
   });

@@ -4,6 +4,7 @@
 import './panel.css';
 import { escapeHtml as esc } from './content';
 import type { PanelContent } from './content';
+import type { StatValues } from '../stats/cs2';
 
 // Layout in px. The build needs room at the sides (scaffold) and at the top (sign).
 const SIDE = 40; // side margin of the panel while it builds
@@ -598,10 +599,10 @@ export interface PanelBuild {
   /** Takes the panel down. Resolves when the host is empty. */
   demolish(): Promise<void>;
   /** Sets the text of the stat boxes (`data-stat`). A rebuild after a resize keeps the text. */
-  fill(values: Readonly<Record<string, string>>): void;
+  fill(values: StatValues): void;
 }
 
-function applyStats(scope: ParentNode, values: Readonly<Record<string, string>>): void {
+function applyStats(scope: ParentNode, values: StatValues): void {
   for (const [key, text] of Object.entries(values)) {
     const box = scope.querySelector(`[data-stat="${key}"]`);
     if (box) box.textContent = text;
@@ -613,7 +614,7 @@ function startRun(
   content: PanelContent,
   speed: number,
   onClose: (() => void) | undefined,
-  stats: Readonly<Record<string, string>>,
+  stats: StatValues,
 ): Run {
   const width = host.clientWidth;
   const height = host.clientHeight;
@@ -791,7 +792,7 @@ export function buildPanel(
       observer.disconnect();
       resolveFinished();
     });
-  const stats: Record<string, string> = {};
+  const stats: StatValues = {};
   let run = startRun(host, content, speed, onClose, stats);
   follow(run);
 
