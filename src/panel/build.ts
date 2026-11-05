@@ -176,7 +176,7 @@ function makeTimeline(speed: number) {
   };
 }
 
-// Content: the roof (title block) and one floor for each section. The "Try it" button goes on the last floor.
+// Content: the roof (title block) and one floor for each section.
 function fillStage(stage: HTMLElement, c: PanelContent): HTMLElement[] {
   const locked = c.status === 'locked';
   const label = esc(c.statusLabel);
@@ -186,19 +186,12 @@ function fillStage(stage: HTMLElement, c: PanelContent): HTMLElement[] {
     `<p class="pb-item">Item: ${esc(c.itemName)}</p>` +
     `<h2 class="pb-title">${esc(c.title)}</h2>` +
     `<span class="pb-status ${esc(c.status)}">${locked ? `<span class="pb-glitch">${label}</span>` : label}</span>` +
-    `<p class="pb-lead">${esc(c.lead)}</p>` +
-    (c.confirm ? `<p class="pb-confirm">To confirm with Nick: ${esc(c.confirm)}</p>` : '');
+    `<p class="pb-lead">${esc(c.lead)}</p>`;
   const floors: HTMLElement[] = [roof];
   for (const sec of c.sections) {
     const f = el('div', 'pb-floor', stage);
     f.innerHTML = `<h3>${esc(sec.heading)}</h3><div class="pb-sec">${sec.html}</div>`;
     floors.push(f);
-  }
-  if (c.tryIt) {
-    floors[floors.length - 1]?.insertAdjacentHTML(
-      'beforeend',
-      '<button class="pb-try" disabled>Try it (later)</button><p class="pb-small">A short practice set. Not built yet.</p>',
-    );
   }
   return floors;
 }
@@ -225,7 +218,7 @@ function measure(root: HTMLElement, stage: HTMLElement, floorEls: HTMLElement[])
   const range = document.createRange();
   const walk = document.createTreeWalker(stage, NodeFilter.SHOW_TEXT);
   for (let n = walk.nextNode() as Text | null; n; n = walk.nextNode() as Text | null) {
-    if (!n.data.trim() || n.parentElement?.closest('.pb-area,.pb-status,.pb-try')) continue;
+    if (!n.data.trim() || n.parentElement?.closest('.pb-area,.pb-status')) continue;
     range.selectNodeContents(n);
     for (const r of range.getClientRects()) {
       if (r.width > 3)
@@ -246,7 +239,7 @@ function measure(root: HTMLElement, stage: HTMLElement, floorEls: HTMLElement[])
       last.h = Math.max(last.h, r.h);
     } else lines.push({ ...r });
   }
-  const boxes = [...stage.querySelectorAll('.pb-area,.pb-status,.pb-try,.pb-confirm')].map((e) => {
+  const boxes = [...stage.querySelectorAll('.pb-area,.pb-status')].map((e) => {
     const r = e.getBoundingClientRect();
     return { x: (r.left - sr.left) * s, y: (r.top - sr.top) * s, w: r.width * s, h: r.height * s };
   });

@@ -143,14 +143,6 @@
   font-style: italic;
   color: #555;
 }
-.pb-confirm {
-  margin: 12px 0 0;
-  background: #fff6d6;
-  border-left: 3px solid #e8b923;
-  padding: 6px 9px;
-  font-size: 13.5px;
-  color: #5a4a10;
-}
 .pb-floor h3 {
   display: flex;
   align-items: center;
@@ -205,15 +197,39 @@
   font-size: 18px;
   white-space: nowrap;
 }
-/* A rank icon next to a peak. */
-.pb-sec .stats b img {
-  display: inline-block;
-  vertical-align: -4px;
-  margin-right: 6px;
-}
 .pb-sec .stats span {
   font-size: 12px;
   color: #888;
+}
+/* Peaks: one row for each rank, the rank at the left and the label at the right. */
+.pb-sec .stats.peaks {
+  grid-auto-flow: row;
+}
+.pb-sec .stats.peaks div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+}
+.pb-sec .stats.peaks b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+}
+/* The Premier rating: the number on its tier badge, as in the game. */
+.pb-sec .stats .pb-badge {
+  box-sizing: border-box;
+  min-width: 112px;
+  height: 26px;
+  padding: 0 22px 0 24px;
+  background: center / 100% 100% no-repeat;
+  color: #fff;
+  font-size: 16px;
+  font-style: italic;
+  line-height: 26px;
+  text-align: right;
 }
 .pb-sec .pb-credit {
   display: flex;
@@ -236,21 +252,6 @@
 .pb-credit a.pb-leetify {
   color: #f84982;
   font-weight: 700;
-}
-.pb-small {
-  font-size: 12px;
-  color: #888;
-  margin: 4px 0 0;
-}
-.pb-try {
-  margin-top: 14px;
-  font: inherit;
-  font-size: 14px;
-  padding: 7px 14px;
-  border-radius: 7px;
-  border: 1.5px dashed #bbb;
-  background: #fafafa;
-  color: #999;
 }
 .pb-close {
   position: absolute;
@@ -360,18 +361,6 @@
 }
 .pb-locked .pb-title {
   color: #2e2010;
-}
-.pb-locked .pb-small {
-  color: #6b5030;
-}
-.pb-locked .pb-confirm {
-  transform: rotate(-0.8deg);
-  box-shadow: 0 2px 4px rgba(60, 40, 10, 0.25);
-}
-.pb-locked .pb-try {
-  background: rgba(255, 255, 255, 0.35);
-  border-color: #8a6a40;
-  color: #6b5030;
 }
 .pb-locked .pb-close {
   top: 18px;

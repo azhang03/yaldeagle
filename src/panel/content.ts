@@ -13,13 +13,12 @@ export interface PanelContent {
   status: 'earned' | 'progress' | 'locked';
   statusLabel: 'Earned' | 'In progress' | 'Locked';
   lead: string;
-  confirm?: string;
   sections: { heading: string; html: string }[];
-  tryIt: boolean;
 }
 
 const STATUS_LABEL = { earned: 'Earned', progress: 'In progress', locked: 'Locked' } as const;
-const LOCKED_LEAD = 'Nick has not earned this yet.';
+/** The lead of a locked item: a goal on his path, not a gap. */
+const LOCKED_LEAD = 'Not earned yet. It is on his path.';
 /** The Leetify badge from their logo pack (public/leetify/), at its 270 by 112 shape. */
 const LEETIFY_BADGE =
   '<img src="/leetify/data-provided-by-leetify.png" alt="Data provided by Leetify" width="77" height="32">';
@@ -49,8 +48,8 @@ const box = (key: StatKey, label: string): string =>
 
 /** Three groups: CS2 from Leetify, lifetime totals from Steam, and the peaks from the item. */
 function statsHtml(peaks: readonly Peak[]): string {
-  const group = (heading: string, boxes: string, foot = ''): string =>
-    `<div class="pb-stat-group"><h4>${heading}</h4><div class="stats">${boxes}</div>${foot}</div>`;
+  const group = (heading: string, boxes: string, foot = '', cls = 'stats'): string =>
+    `<div class="pb-stat-group"><h4>${heading}</h4><div class="${cls}">${boxes}</div>${foot}</div>`;
   return (
     group(
       'CS2',
@@ -68,27 +67,31 @@ function statsHtml(peaks: readonly Peak[]): string {
         box('hours', 'Hours'),
       `<p class="pb-credit">Steam totals, with his CS:GO years. ${link(STEAM_PROFILE, 'Steam profile')}</p>`,
     ) +
-    group('Peaks', peaks.map(peakBox).join(''))
+    group('Peaks', peaks.map(peakRow).join(''), '', 'stats peaks')
   );
 }
 
-/** A peak: the rank icon (if any) next to the rank, and the label under them. */
-function peakBox(p: Peak): string {
+/** A peak row: the rank with its icon or badge, and the label. */
+function peakRow(p: Peak): string {
   const icon = p.icon
     ? `<img src="${escapeHtml(p.icon.src)}" alt="" width="${p.icon.width}" height="${p.icon.height}">`
     : '';
-  return `<div><b>${icon}${escapeHtml(p.value)}</b><span>${escapeHtml(p.label)}</span></div>`;
+  const value = p.badge
+    ? `<span class="pb-badge" style="background-image: url('${escapeHtml(p.badge)}')">${escapeHtml(p.value)}</span>`
+    : escapeHtml(p.value);
+  return `<div><b>${icon}${value}</b><span>${escapeHtml(p.label)}</span></div>`;
 }
 
 export function panelContent(item: ItemDef): PanelContent {
   const area = AREAS[item.area];
-  const sections = [{ heading: 'What it is', html: `<p>${escapeHtml(item.what)}</p>` }];
+  const sections = [{ heading: 'About', html: `<p>${escapeHtml(item.what)}</p>` }];
   if (item.stats) sections.push({ heading: 'Stats', html: statsHtml(item.stats.peaks) });
   if (item.history && item.status !== 'locked')
-    sections.push({ heading: 'History', html: list(item.history) });
+    sections.push({ heading: 'Highlights', html: list(item.history) });
   if (item.earn && item.status !== 'earned')
-    sections.push({ heading: 'How he earns it', html: list(item.earn) });
-  sections.push({ heading: 'On the eagle', html: `<p>${escapeHtml(item.wearText)}</p>` });
+    sections.push({ heading: 'Requirements', html: list(item.earn) });
+  if (item.worn)
+    sections.push({ heading: 'On the eagle', html: `<p>${escapeHtml(item.worn.text)}</p>` });
   return {
     area: { name: area.name, color: area.color },
     itemName: item.name,
@@ -96,8 +99,6 @@ export function panelContent(item: ItemDef): PanelContent {
     status: item.status,
     statusLabel: STATUS_LABEL[item.status],
     lead: item.status === 'locked' ? LOCKED_LEAD : item.line,
-    confirm: item.confirm,
     sections,
-    tryIt: !!item.tryIt,
   };
 }

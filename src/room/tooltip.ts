@@ -9,8 +9,8 @@ export interface Tooltip {
 
 const TEXT: Readonly<Record<ItemStatus, string>> = {
   earned: 'Click to look closer.',
-  progress: 'In progress. Nick is working on it.',
-  locked: 'Locked. Nick has not earned this yet.',
+  progress: 'In progress.',
+  locked: 'Locked. Not earned yet.',
 };
 
 export function createTooltip(): Tooltip {
