@@ -58,7 +58,9 @@ Vercel builds the site from GitHub. A push to `main` deploys to production. Each
 
 CI (`.github/workflows/check.yml`) runs the checks, the tests, and the build on each pull request and each push to `main`.
 
-Live site: https://yaldeagle.vercel.app/
+Live site: https://yalda.si/ (it redirects to https://www.yalda.si/). The Vercel address https://yaldeagle.vercel.app/ also works.
+
+The domain is at Namecheap, with Namecheap BasicDNS. Its records point to Vercel: an A record for `@` and a CNAME record for `www`, with the values that the Vercel project settings show under Domains.
 
 ## Mark a credential as earned
 
