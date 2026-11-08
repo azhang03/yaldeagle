@@ -11,6 +11,27 @@ body {
   overflow: hidden;
 }
 
+/* The two views: Nick's room and the YALDAQ firm. Each fills the screen. A hidden view gets no
+   input. */
+#nick,
+#yaldaq {
+  position: fixed;
+  inset: 0;
+}
+
+#nick {
+  z-index: 1;
+}
+
+#yaldaq {
+  z-index: 2;
+}
+
+[data-active='false'] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* An inline canvas adds a gap under it, and the gap makes a scroll bar. With touch-action none, a
    finger on the canvas pans and zooms the room, not the page. */
 canvas {
