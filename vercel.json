@@ -1,0 +1,4 @@
+{
+  "rewrites": [{ "source": "/yaldaq", "destination": "/index.html" }],
+  "redirects": [{ "source": "/yaldaq/", "destination": "/yaldaq", "permanent": true }]
+}

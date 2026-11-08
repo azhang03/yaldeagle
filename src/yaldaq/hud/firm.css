@@ -2,7 +2,8 @@
    top of it. Every rule is inside #yaldaq, so nothing here touches Nick's room. No rule sets
    visibility: visible, because that would show through the hidden #yaldaq container. */
 #yaldaq {
-  --yq-top: max(8px, env(safe-area-inset-top));
+  /* The top of the overlays: under the view toggle (40 px high, 10 px from the top). */
+  --yq-top: calc(max(10px, env(safe-area-inset-top)) + 50px);
   --yq-ink: #2a2a2a;
   --yq-muted: #888;
   --yq-line: #ebe7df;

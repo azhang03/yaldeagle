@@ -1,22 +1,14 @@
 import './style.css';
-import { startNick } from './room/nick';
+import './switch.css';
+import { startSwitch } from './switch';
 
 const firmHost = document.getElementById('yaldaq');
-const params = new URLSearchParams(location.search);
-const showFirm = (): void => {
+// Dev only: ?badges shows all 16 staff badges of the YALDAQ firm in place of the site.
+if (import.meta.env.DEV && firmHost && new URLSearchParams(location.search).has('badges')) {
   document.getElementById('nick')?.setAttribute('data-active', 'false');
-  if (firmHost) firmHost.dataset.active = 'true';
-};
-// Dev only: ?badges shows all 16 staff badges, and ?firm shows the YALDAQ firm in place of
-// Nick's room.
-if (import.meta.env.DEV && firmHost && params.has('badges')) {
-  showFirm();
+  document.getElementById('view-toggle')?.setAttribute('hidden', '');
+  firmHost.dataset.active = 'true';
   void import('./yaldaq/badge/gallery').then((m) => m.mountGallery(firmHost));
-} else if (import.meta.env.DEV && firmHost && params.has('firm')) {
-  showFirm();
-  void import('./yaldaq/entry').then((m) =>
-    m.mountFirm(firmHost, { onVisitChange: () => {} }).setActive(true),
-  );
 } else {
-  startNick({ onVisitChange: () => {} });
+  startSwitch();
 }

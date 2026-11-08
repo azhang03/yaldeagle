@@ -1,11 +1,37 @@
 // The parts of the cast: the small objects that fly between characters, the figure rig,
 // and the gear (hair, caps, glasses, and hand tools).
-import { ExtrudeGeometry, Mesh, Shape } from 'three';
+import { BufferAttribute, BufferGeometry, Mesh } from 'three';
 import type { Group, Object3D } from 'three';
 import { clamp01, kit } from '../kit';
 import type { Kit } from '../kit';
 import { KRAFT, PAINT, WAX } from './core';
 import type { Rig } from './core';
+
+type Point = readonly [number, number];
+
+/**
+ * A flat triangle a, b, c in the xy plane (counterclockwise seen from +z), d thick along +z.
+ * It is the shape that ExtrudeGeometry makes, without the size of the shape code in the page.
+ */
+function triPrism(a: Point, b: Point, c: Point, d: number): BufferGeometry {
+  const p = [a, b, c] as const;
+  const out: number[] = [];
+  const v = (q: Point, z: number): void => void out.push(q[0], q[1], z);
+  // The front (z = d) and the back (z = 0).
+  (v(a, d), v(b, d), v(c, d));
+  (v(a, 0), v(c, 0), v(b, 0));
+  // The three sides.
+  for (let i = 0; i < 3; i++) {
+    const q0 = p[i] ?? a;
+    const q1 = p[(i + 1) % 3] ?? a;
+    (v(q0, 0), v(q1, 0), v(q1, d));
+    (v(q0, 0), v(q1, d), v(q0, d));
+  }
+  const g = new BufferGeometry();
+  g.setAttribute('position', new BufferAttribute(new Float32Array(out), 3));
+  g.computeVertexNormals();
+  return g;
+}
 
 // Small objects that fly between characters.
 
@@ -33,15 +59,7 @@ export function buildEnvelope(): EnvelopeObject {
   k.box([W, H, 0.014], [0, 0, 0], KRAFT);
   const card = k.box([W - 0.05, H - 0.04, 0.006], [0, 0, 0], '#fbf8f1');
   const flap = k.sub([0, H / 2, 0.008]);
-  const shape = new Shape();
-  shape.moveTo(-W / 2, 0);
-  shape.lineTo(W / 2, 0);
-  shape.lineTo(0, -0.13);
-  shape.closePath();
-  const tri = new Mesh(
-    new ExtrudeGeometry(shape, { depth: 0.006, bevelEnabled: false }),
-    PAINT('#b8925a'),
-  );
+  const tri = new Mesh(triPrism([-W / 2, 0], [0, -0.13], [W / 2, 0], 0.006), PAINT('#b8925a'));
   tri.castShadow = true;
   flap.add(tri);
   k.cyl(0.042, 0.012, [0, -0.112, 0.012], WAX, [Math.PI / 2, 0, 0], flap);
