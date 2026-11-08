@@ -41,9 +41,25 @@ export function createUnseal(deps: {
   locker: Locker;
   door: BlastDoor;
   envelopes: Envelopes;
+  /**
+   * Runs when an unseal starts. A promise holds the show until it ends (the camera flies to
+   * the vault first).
+   */
+  onStart?: () => Promise<void> | null;
+  /** Runs when an unseal plays to its end (not after finish or cancel). */
+  onEnd?: () => void;
 }): Unseal {
   const { locker, door, envelopes } = deps;
-  let seq: { tok: Token; i: number; t: number; slot: Vector3; up: Vector3 } | null = null;
+  interface Seq {
+    tok: Token;
+    i: number;
+    t: number;
+    slot: Vector3;
+    up: Vector3;
+    /** True while the show waits for onStart. */
+    wait: boolean;
+  }
+  let seq: Seq | null = null;
 
   function finish(t: number): void {
     if (!seq) return;
@@ -71,14 +87,22 @@ export function createUnseal(deps: {
       tok.obj.position.copy(locker.root.localToWorld(new Vector3(...c.slot)));
       const slot = tok.obj.position.clone();
       const up = locker.root.localToWorld(new Vector3(c.slot[0], locker.H + 0.5, 0.55));
-      seq = { tok, i, t: 0, slot, up };
+      const mine: Seq = { tok, i, t: 0, slot, up, wait: false };
+      seq = mine;
+      const hold = deps.onStart?.();
+      if (hold) {
+        mine.wait = true;
+        void hold.then(() => {
+          mine.wait = false;
+        });
+      }
     },
     finish,
     cancel() {
       seq = null;
     },
     update(dt, t) {
-      if (!seq) return;
+      if (!seq || seq.wait) return;
       if (!envelopes.tokens.has(seq.tok.env.id)) {
         seq = null;
         envelopes.shutDoor();
@@ -109,6 +133,7 @@ export function createUnseal(deps: {
         seq = null;
         envelopes.setStatic(tok, Math.max(t, tok.times.unseal));
         envelopes.shutDoor();
+        deps.onEnd?.();
       }
     },
   };
