@@ -12,6 +12,8 @@ import { esc } from '../data/text';
 const LEAD_MS = 20e3;
 /** The bar shows this many day buttons. The older days are in the "Earlier" list. */
 const DAY_BUTTONS = 3;
+/** A day from the feed. Other text never reaches the HTML. */
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface ReplayBar {
   readonly root: HTMLElement;
@@ -127,7 +129,7 @@ export function createReplayBar(
   track.addEventListener('pointercancel', () => (dragging = false));
 
   function drawDays(): void {
-    const all = model.days;
+    const all = model.days.filter((d) => DATE.test(d));
     const recent = all.slice(-DAY_BUTTONS);
     const earlier = all.slice(0, Math.max(0, all.length - DAY_BUTTONS));
     const select = earlier.length

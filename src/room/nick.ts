@@ -90,7 +90,9 @@ export function startNick(opts: { onVisitChange(visiting: boolean): void }): Nic
     aspect: () => stage.aspect(),
     slow: params.has('slow'),
   });
-  if (!brain) startManualKeys(animator, start, random, () => visits.mode() === 'wander');
+  if (!brain) {
+    startManualKeys(animator, start, random, () => active && visits.mode() === 'wander');
+  }
 
   // A click or a tap counts in wander, in a trip, and in focus. A click on the floor sends the eagle
   // there while it wanders, and ends a visit in focus.

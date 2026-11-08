@@ -6,7 +6,7 @@
 //
 // The tokens follow the model: a model swap adds and removes tokens, but a token keeps its
 // trip and its stage. Only a jump (reset) sets every token at once.
-import { Box3, Vector3, type Mesh, type Object3D, type Scene } from 'three';
+import { Box3, Mesh, Vector3, type Object3D, type Scene } from 'three';
 import type { Actor } from '../data/contract';
 import type { Envelope, Model } from '../data/model';
 import {
@@ -18,7 +18,7 @@ import {
   type StageTimes,
 } from '../data/stages';
 import { buildEnvelope, buildFolder, type Character, type EnvelopeObject } from './cast';
-import { AZ, FACE_VIEWER, at, clamp01, ease, smooth, uvOf } from './kit';
+import { AZ, FACE_VIEWER, at, clamp01, ease, smooth, unitBox, unitCyl, uvOf } from './kit';
 import { CUBBIES, type BlastDoor, type Locker } from './props';
 import { GLIDE, buildTracks, poolMesh, type Layout, type RouteName, type Tracks } from './set';
 
@@ -156,9 +156,11 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
     tracksKey = key;
     if (tracks) {
       scene.remove(tracks.root);
+      // Each build makes its own geometries and materials.
       tracks.root.traverse((o) => {
-        const m = o as Partial<Mesh>;
-        m.geometry?.dispose();
+        if (!(o instanceof Mesh)) return;
+        o.geometry.dispose();
+        for (const m of [o.material].flat()) m.dispose();
       });
     }
     const polys: Record<string, [number, number][]> = {};
@@ -185,11 +187,22 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
     refreshTracks(true);
   }
 
+  /**
+   * An opened envelope whose cubby went to a newer envelope (a full locker) has no entry in
+   * `cub`. It leaves the room at that moment.
+   */
+  function displaced(tok: Token, t: number, cub: ReadonlyMap<string, number>): boolean {
+    return t >= tok.times.unseal && !cub.has(tok.env.id);
+  }
+
   /** A free cubby for a token that enters the locker at t. */
   function pickCubby(tok: Token, t: number): number {
-    const ideal = cubbiesAt(timesById, t, CUBBIES).get(tok.env.id);
+    const cub = cubbiesAt(timesById, t, CUBBIES);
+    const ideal = cub.get(tok.env.id);
     const used = new Set<number>();
-    for (const o of tokens.values()) if (o !== tok && o.i != null) used.add(o.i);
+    for (const o of tokens.values()) {
+      if (o !== tok && o.i != null && !displaced(o, t, cub)) used.add(o.i);
+    }
     if (ideal != null && !used.has(ideal)) return ideal;
     for (let i = 0; i < CUBBIES; i++) if (!used.has(i)) return i;
     return ideal ?? 0;
@@ -235,6 +248,11 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
     scene.remove(tok.obj, tok.glow);
     deps.removeHit(tok.obj);
     tok.glow.geometry.dispose();
+    // The flap of each envelope has its own geometry. The boxes share the unit geometries.
+    tok.obj.traverse((o) => {
+      if (o instanceof Mesh && o.geometry !== unitBox && o.geometry !== unitCyl)
+        o.geometry.dispose();
+    });
     if (tok.trip) tracks?.setGlow(tok.trip.name, 0);
     tokens.delete(tok.env.id);
     const i = tok.i;
@@ -263,8 +281,13 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
 
   function sync(t: number): void {
     let changed = false;
+    const cub = cubbiesAt(timesById, t, CUBBIES);
     for (const tok of [...tokens.values()]) {
-      if (!timesById.has(tok.env.id) || t >= tok.times.unseal + LOCKER_KEEP_MS) {
+      if (
+        !timesById.has(tok.env.id) ||
+        t >= tok.times.unseal + LOCKER_KEEP_MS ||
+        displaced(tok, t, cub)
+      ) {
         dropToken(tok);
         changed = true;
       }
@@ -273,6 +296,7 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
       for (const env of model.envelopes) {
         const times = timesById.get(env.id);
         if (!times || tokens.has(env.id) || t >= times.unseal + LOCKER_KEEP_MS) continue;
+        if (t >= times.unseal && !cub.has(env.id)) continue;
         const tok = makeToken(env, times);
         tokens.set(env.id, tok);
         setStatic(tok, t);

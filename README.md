@@ -49,7 +49,7 @@ Options for development. Add them to the address, for example `?bounds&mounts`. 
 | `?panel=<id>` | Opens the panel of one item at once, without a visit. The ids are in `src/room/items.ts`, for example `?panel=fe`. Esc or × closes it.                                                                         |
 | `?slow`       | Builds the panel at a quarter of the speed.                                                                                                                                                                    |
 
-Options of the YALDAQ view. `?firm` works only on the dev server. The others also work on the live site.
+Options of the YALDAQ view. For now the view opens only on the dev server, with `?firm`.
 
 | Option                    | What it does                                                                                                                              |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |

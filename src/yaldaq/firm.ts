@@ -147,6 +147,8 @@ export function mountFirm(
   const home = {} as Record<CastActor, Vector3>;
 
   let set: FirmSet | null = null;
+  // Each floor plan builds its set once. A layout change swaps them, so nothing leaks.
+  const sets = new Map<'wide' | 'tall', FirmSet>();
   const envelopes = createEnvelopes({
     scene,
     locker,
@@ -167,7 +169,8 @@ export function mountFirm(
     layoutName = name;
     const L = LAYOUTS[name];
     if (set) scene.remove(set.root);
-    set = buildSet(L);
+    set = sets.get(name) ?? buildSet(L);
+    sets.set(name, set);
     scene.add(set.root);
     place(locker.root, L.spots.locker);
     place(door.root, L.spots.door);
