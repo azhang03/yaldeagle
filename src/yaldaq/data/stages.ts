@@ -13,8 +13,6 @@ export interface StageTimes {
 
 /** An opened envelope stays in its cubby for this long after the unseal. */
 export const LOCKER_KEEP_MS = 24 * 3600e3;
-/** An opened envelope shows its tag for this long after the unseal. */
-export const OPEN_TAG_MS = 6 * 3600e3;
 
 /**
  * The times when the envelope moves from stage to stage. When the envelope was sealed before

@@ -10,6 +10,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
+  type Vector3,
 } from 'three';
 import { type Vec3, kit, texture } from './kit';
 import { PAL, ctx2d, desk, monitor, paint, poolMesh } from './set';
@@ -44,6 +45,8 @@ export interface Locker {
   /** The badge of the newest count of this kind grows and shrinks once. */
   pop(i: number, kind: BadgeKind): void;
   update(dt: number): void;
+  /** The cubby at a point in locker space (its front face), or null between the cubbies. */
+  cubbyAt(p: Vector3): number | null;
 }
 
 /** The number of cubbies in the locker. */
@@ -147,6 +150,14 @@ export function buildLocker(): Locker {
     root,
     H: topY + 0.06,
     cub,
+    cubbyAt(p) {
+      const c = Math.round(p.x / pitchX + (COLS - 1) / 2);
+      const fromBottom = Math.floor((p.y - 0.16) / pitchY);
+      const inRow = p.y - 0.16 - fromBottom * pitchY;
+      if (c < 0 || c >= COLS || fromBottom < 0 || fromBottom >= ROWS || inRow > IH) return null;
+      if (Math.abs(p.x - (cols[c] ?? 0)) > IW / 2) return null;
+      return (ROWS - 1 - fromBottom) * COLS + c;
+    },
     setLit(i, mode) {
       cub[i]?.back.material.color.copy(backMat[mode]);
     },

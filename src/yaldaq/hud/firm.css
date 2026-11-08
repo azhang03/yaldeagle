@@ -638,8 +638,9 @@
   .yq-bubble.err::after {
     border-color: var(--yq-err);
   }
+  /* An envelope tag only shows: a tap goes to the room under it. */
   .yq-envtag {
-    pointer-events: auto;
+    pointer-events: none;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -654,7 +655,6 @@
     border: 1px solid var(--yq-kraft-dark);
     border-radius: 8px;
     color: #4a3a20;
-    cursor: pointer;
     box-shadow: 0 3px 8px rgba(40, 30, 20, 0.15);
   }
   .yq-envtag b {
@@ -678,15 +678,6 @@
     border-radius: 50%;
     background: #3fbf72;
     flex: none;
-  }
-  .yq-envtag.compact {
-    min-height: 0;
-    padding: 2px 7px;
-    font-size: 10px;
-    gap: 4px;
-  }
-  .yq-envtag.compact .yq-stamps {
-    font-size: 9px;
   }
 
   /* The last 24 hours: between the pills on a wide screen, under them on a tall screen

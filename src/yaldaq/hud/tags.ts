@@ -2,12 +2,8 @@
 // envelope tags. The tags follow the 3D points on the screen each frame.
 import { Vector3 } from 'three';
 import { esc } from '../data/text';
-import { OPEN_TAG_MS } from '../data/stages';
 import type { Character } from '../scene/cast';
 import type { CastActor, Token } from '../scene/envelopes';
-import { at } from '../scene/kit';
-import type { Locker } from '../scene/props';
-import type { Layout } from '../scene/set';
 import type { FirmStage } from '../scene/stage';
 
 export interface Tags {
@@ -24,12 +20,12 @@ export interface Tags {
   /** Places every tag for this frame. */
   position(f: {
     tokens: ReadonlyMap<string, Token>;
-    layout: Layout;
-    t: number;
     /** The token that the unseal moves: its tag hides. */
     busy: Token | null;
     /** A visit hides the names and the envelope tags. */
     visiting: boolean;
+    /** The envelope under the mouse pointer: the tag of a resting envelope shows only then. */
+    hover: string | null;
     /** The top edge for the bubbles, in px: the bottom of the pills. */
     top: number;
   }): void;
@@ -89,27 +85,20 @@ export function createTags(
     stage: FirmStage;
     chars: Readonly<Record<CastActor, Character>>;
     actors: readonly CastActor[];
-    locker: Locker;
-    /** A tap on an envelope tag. */
-    onEnvTap?: (id: string) => void;
   },
 ): Tags {
-  const { stage, chars, actors, locker } = deps;
-  function makeTag<K extends 'div' | 'button'>(
-    tag: K,
-    cls: string,
-    html = '',
-  ): HTMLElementTagNameMap[K] {
-    const el = document.createElement(tag);
+  const { stage, chars, actors } = deps;
+  function makeTag(cls: string, html = ''): HTMLElement {
+    const el = document.createElement('div');
     el.className = cls;
     el.innerHTML = html;
     layer.appendChild(el);
     return el;
   }
   const names = new Map<CastActor, HTMLElement>();
-  for (const a of actors) names.set(a, makeTag('div', 'yq-name', esc(chars[a].info.name)));
+  for (const a of actors) names.set(a, makeTag('yq-name', esc(chars[a].info.name)));
   const bubbles = new Map<CastActor, { el: HTMLElement; until: number; w: number; h: number }>();
-  const envTags = new Map<string, HTMLButtonElement>();
+  const envTags = new Map<string, HTMLElement>();
 
   function screenOf(p: Vector3): { x: number; y: number; off: boolean } {
     const s = stage.toScreen(p);
@@ -124,7 +113,7 @@ export function createTags(
       if (!text) return;
       let b = bubbles.get(actor);
       if (!b) {
-        b = { el: makeTag('div', 'yq-bubble'), until: 0, w: 0, h: 0 };
+        b = { el: makeTag('yq-bubble'), until: 0, w: 0, h: 0 };
         bubbles.set(actor, b);
       }
       b.el.textContent = text;
@@ -141,17 +130,14 @@ export function createTags(
     setEnvTag(id, html, open) {
       let el = envTags.get(id);
       if (!el) {
-        el = makeTag('button', 'yq-envtag');
-        el.type = 'button';
+        el = makeTag('yq-envtag');
         el.style.display = 'none';
-        const tap = deps.onEnvTap;
-        if (tap) el.onclick = () => tap(id);
         envTags.set(id, el);
       }
       if (el.innerHTML !== html) el.innerHTML = html;
       el.classList.toggle('open', open);
     },
-    position({ tokens, layout, t, busy, visiting, top }) {
+    position({ tokens, busy, visiting, hover, top }) {
       const now = performance.now() / 1000;
       const { width } = stage.size();
       const live: Item[] = [];
@@ -185,16 +171,16 @@ export function createTags(
       }
       stackUp(live, top);
 
-      // The envelope tags: under the locker wall for a waiting envelope (so the wall screen
-      // stays clear), or over a moving one. They hide during a visit and while the unseal
-      // plays. An opened envelope shows its tag for OPEN_TAG_MS.
+      // The envelope tags float over their envelope. An envelope on its way shows its tag. An
+      // envelope that rests in the locker shows it only while the mouse is over its cubby, so
+      // the tags never cover the room. The tags hide during a visit and while the unseal plays.
+      // They take no taps: a tap goes to the room under them.
       for (const [id, el] of envTags) {
         if (!tokens.has(id)) {
           el.remove();
           envTags.delete(id);
         }
       }
-      const below: (Item & { i: number })[] = [];
       const above: Item[] = [];
       for (const tok of tokens.values()) {
         const el = envTags.get(tok.env.id);
@@ -205,42 +191,23 @@ export function createTags(
           visiting ||
           busy === tok ||
           !el.firstChild ||
-          t >= tok.env.opensAt + OPEN_TAG_MS;
+          (resting && hover !== tok.env.id);
         if (hide) {
           el.style.display = 'none';
           continue;
         }
-        const tagAt = layout.tagAt;
-        const slot = locker.cub[tok.i ?? 0]?.slot ?? [0, 0, 0];
-        const p = !resting
-          ? tmp.copy(tok.obj.position).setY(tok.obj.position.y + 0.3)
-          : tagAt
-            ? at(...tagAt)
-            : locker.root.localToWorld(tmp.set(slot[0], 0.02, 0.3));
-        el.classList.toggle('compact', !!tagAt);
-        const s = screenOf(p);
+        const s = screenOf(tmp.copy(tok.obj.position).setY(tok.obj.position.y + 0.3));
         if (s.off) {
           el.style.display = 'none';
           continue;
         }
         el.style.display = '';
-        // A tag over a moving envelope must not catch a tap meant for the character under it.
-        el.style.pointerEvents = resting ? '' : 'none';
         const w = el.offsetWidth;
         const h = el.offsetHeight;
         const x = Math.min(width - w - 4, Math.max(4, s.x - w / 2));
-        if (resting) below.push({ el, w, h, x, y: s.y + 6, i: tok.i ?? 0 });
-        else above.push({ el, w, h, x, y: s.y - h - 6 });
+        above.push({ el, w, h, x, y: s.y - h - 6 });
       }
-      stackUp(above);
-      // Under the locker the tags go down in the cubby order.
-      below.sort((p, q) => p.i - q.i);
-      let yNext = -Infinity;
-      for (const it of below) {
-        it.y = Math.max(it.y, yNext);
-        yNext = it.y + it.h + GAP;
-        it.el.style.transform = `translate(${it.x.toFixed(1)}px, ${it.y.toFixed(1)}px)`;
-      }
+      stackUp(above, top);
     },
   };
 }

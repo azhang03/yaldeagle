@@ -161,8 +161,6 @@ export type RouteName = 'lab' | 'ladder' | 'policy' | 'locker';
 export interface Layout {
   rect: Rect;
   bounds: { u0: number; u1: number; v0: number; v1: number };
-  /** Where the tags of the resting envelopes stack, when it is not at the locker. */
-  tagAt?: Vec3;
   areas: readonly Area[];
   back: readonly BackSegment[];
   walls: readonly Wall[];
@@ -322,9 +320,6 @@ export const LAYOUTS: Record<'wide' | 'tall', Layout> = {
   tall: {
     rect: { u0: -4.1, u1: 4.1, v0: -10.9, v1: 8.7, top: 2.9 },
     bounds: { u0: -3.8, u1: 3.8, v0: -10.6, v1: 8.4 },
-    // On a phone the tags of the waiting envelopes stack on the windows of the fill desk, so
-    // they do not cover the trading desk under the vault.
-    tagAt: [-2.2, -10.6, 2.7],
     areas: [
       { name: 'Fill desk', floor: 'concrete', u0: -3.8, u1: -0.6, v0: -10.6, v1: -6.6, sign: true },
       { name: 'Data vault', floor: 'steel', u0: -0.6, u1: 3.8, v0: -10.6, v1: -7.0, sign: true },

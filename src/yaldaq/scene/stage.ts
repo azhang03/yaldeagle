@@ -78,6 +78,8 @@ export interface FirmStage {
   /** Unmarks an object that leaves the scene, so a tap can no longer find it. */
   removeHit(obj: Object3D): void;
   pick(clientX: number, clientY: number): HitInfo | null;
+  /** The nearest world point of obj under a screen point (client px), or null. */
+  hitPoint(clientX: number, clientY: number, obj: Object3D): Vector3 | null;
   onTap(fn: TapHandler): void;
   /** Canvas px of a world point. `behind` is true when the point is behind the camera. */
   toScreen(p: Vector3): { x: number; y: number; behind: boolean };
@@ -306,6 +308,12 @@ export function createFirmStage(
     }
     return null;
   }
+  function hitPoint(clientX: number, clientY: number, obj: Object3D): Vector3 | null {
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    return ray.intersectObject(obj, true)[0]?.point ?? null;
+  }
 
   // Pointer input. A tap (or a click) calls the tap handlers. A drag pans, a pinch or the wheel
   // zooms. On a mouse, the cursor shows when a marked object is under it.
@@ -420,6 +428,7 @@ export function createFirmStage(
     addHit,
     removeHit,
     pick,
+    hitPoint,
     onTap: (fn) => {
       tapHandlers.push(fn);
     },

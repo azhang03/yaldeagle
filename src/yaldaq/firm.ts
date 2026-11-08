@@ -167,13 +167,22 @@ export function mountFirm(
     onStart: () => visit.unsealStarted(),
     onEnd: () => visit.unsealEnded(),
   });
-  const tags = createTags(el.tags, {
-    stage,
-    chars,
-    actors: ACTORS,
-    locker,
-    onEnvTap: () => visit.open('vault'),
+  const tags = createTags(el.tags, { stage, chars, actors: ACTORS });
+  // With a mouse, the cubby under the pointer shows the tag of the envelope in it.
+  let hoverCubby: number | null = null;
+  stage.canvas.addEventListener('pointermove', (ev) => {
+    if (ev.pointerType !== 'mouse') return;
+    const p = stage.hitPoint(ev.clientX, ev.clientY, locker.root);
+    hoverCubby = p ? locker.cubbyAt(locker.root.worldToLocal(p)) : null;
   });
+  stage.canvas.addEventListener('pointerleave', () => (hoverCubby = null));
+  function hoveredEnvelope(): string | null {
+    if (hoverCubby === null) return null;
+    for (const tok of envelopes.tokens.values()) {
+      if (tok.i === hoverCubby && !tok.trip) return tok.env.id;
+    }
+    return null;
+  }
 
   function place(obj: Object3D, s: Spot): void {
     obj.position.copy(at(s[0], s[1]));
@@ -485,10 +494,9 @@ export function mountFirm(
     }
     tags.position({
       tokens: envelopes.tokens,
-      layout: LAYOUTS[layoutName],
-      t: clock?.t ?? 0,
       busy: unseal.token,
       visiting: visit.subject !== null,
+      hover: hoveredEnvelope(),
       top: hud.topEdge,
     });
   });
