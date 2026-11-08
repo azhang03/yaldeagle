@@ -45,6 +45,20 @@ describe('createClock', () => {
     expect(clock.t).toBe(ms('2026-11-02T08:00:00Z'));
   });
 
+  it('gives a jump when the live time moves much more than the frame time', () => {
+    let now = ms('2026-11-02T06:00:00Z');
+    const clock = createClock(bounds, NONE, () => now);
+    clock.tick(0.016);
+    // The tab was hidden for an hour. The next frame plays no motion for that hour.
+    now += 3600e3;
+    expect(clock.tick(0.05)).toEqual({
+      from: ms('2026-11-02T06:55:00Z'),
+      to: ms('2026-11-02T06:55:00Z'),
+      jumped: true,
+    });
+    expect(clock.live).toBe(true);
+  });
+
   it('gives a jump on the tick after a seek and ends live mode', () => {
     const clock = createClock(bounds, NONE, () => ms('2026-11-02T08:03:00Z'));
     clock.tick(0.016);

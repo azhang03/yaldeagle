@@ -91,9 +91,13 @@ export default {
         });
       case 'GET':
       case 'HEAD':
-        return get(request, path);
       case 'PUT':
-        return put(request, path);
+        try {
+          return await (request.method === 'PUT' ? put(request, path) : get(request, path));
+        } catch {
+          // An R2 failure. The answer still has the CORS header, so the page logs no CORS error.
+          return json(500, { error: 'internal' });
+        }
       default:
         return json(405, { error: 'method' });
     }

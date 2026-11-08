@@ -6,6 +6,9 @@ import { LIVE_DELAY_MS } from './model';
 export const SPEEDS = [1, 10, 60] as const;
 export type Speed = (typeof SPEEDS)[number];
 
+/** In live mode, a step longer than this (and longer than twice the frame time) is a jump. */
+const LONG_STEP_MS = 5000;
+
 export interface ClockOptions {
   /** The start time, or null for live mode. */
   t: number | null;
@@ -93,6 +96,11 @@ export function createClock(
       jumped = false;
       if (live && playing) {
         t = clampT(now() - LIVE_DELAY_MS);
+        // A long step (a hidden tab, or a stale feed that caught up) is a jump: the page sets
+        // the state at t and plays no motion for the skipped span.
+        if (!wasJump && t - from > Math.max(LONG_STEP_MS, dt * 2000)) {
+          return { from: t, to: t, jumped: true };
+        }
       } else if (playing && !wasJump) {
         t = clampT(t + dt * 1000 * speed);
         if (t >= bounds().end) {

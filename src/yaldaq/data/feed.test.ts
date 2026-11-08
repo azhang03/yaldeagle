@@ -128,6 +128,58 @@ describe('createFeed', () => {
     expect(feed.model?.asOf).toBe(Date.parse('2026-11-02T09:00:00Z'));
   });
 
+  it('keeps the events of the old live file after a gap at the start of a day', async () => {
+    const at = (iso: string): FeedEvent => ({ ...tick('00:00'), t: iso });
+    const day = (date: string, times: string[]) => ({
+      schema: 2,
+      date,
+      complete: false,
+      events: times.map((hm) => at(`${date}T${hm}:00Z`)),
+    });
+    const days = ['2026-11-01', '2026-11-02'];
+    const f = counted({
+      'live.json': {
+        ...liveAt(
+          '2026-11-02T00:10:00Z',
+          ['23:45', '23:55'].map((hm) => at(`2026-11-01T${hm}:00Z`)),
+        ),
+        days,
+      },
+      'days/2026-11-01.json': day('2026-11-01', ['23:00', '23:45', '23:55']),
+      'days/2026-11-02.json': day('2026-11-02', ['00:05']),
+    });
+    const feed = createFeed(BASE, { fetch: f.fetch, pollMs: HOUR });
+    await pollOnce(feed);
+    // No gap: the 23:55 event is now only in the live file.
+    f.files['live.json'] = {
+      ...liveAt('2026-11-02T00:20:00Z', [
+        at('2026-11-01T23:55:00Z'),
+        at('2026-11-02T00:05:00Z'),
+        at('2026-11-02T00:15:00Z'),
+      ]),
+      days,
+    };
+    await pollOnce(feed);
+    // A gap: the next poll comes a day later. The day 2026-11-01 stays loaded.
+    f.files['days/2026-11-02.json'] = day('2026-11-02', ['00:05', '00:15', '12:00']);
+    f.files['days/2026-11-03.json'] = day('2026-11-03', ['07:35']);
+    f.files['live.json'] = {
+      ...liveAt('2026-11-03T08:00:00Z', [at('2026-11-03T07:35:00Z')]),
+      days: [...days, '2026-11-03'],
+    };
+    await pollOnce(feed);
+    const ticks = feed.model?.events.filter((e) => e.actor === 'loop').map((e) => e.t.slice(5, 16));
+    expect(ticks).toEqual([
+      '11-01T23:00',
+      '11-01T23:45',
+      '11-01T23:55',
+      '11-02T00:05',
+      '11-02T00:15',
+      '11-02T12:00',
+      '11-03T07:35',
+    ]);
+  });
+
   it('keeps the model and the status when a poll fails', async () => {
     const f = counted({ ...FIXTURE_FILES });
     const feed = createFeed(BASE, { fetch: f.fetch, pollMs: HOUR });

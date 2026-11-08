@@ -168,7 +168,9 @@ export function createFeed(
       // No gap: the old live events cover the span up to the new cut.
       fold(live, newCut);
     } else {
-      // The first file, or a gap: get the last days again.
+      // The first file, or a gap: get the last days again. First move the whole old live tail
+      // into the day files, so a kept day reaches the old as_of.
+      if (live) fold(live, Infinity);
       const lastDay = dayOf(asOf);
       const dayBefore = addDays(lastDay, -1);
       const from = firstLoaded && firstLoaded > dayBefore ? firstLoaded : dayBefore;
