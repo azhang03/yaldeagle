@@ -266,6 +266,8 @@ export function createVisit(deps: VisitDeps): Visit {
 
   /** Starts a visit. v: the camera subject ('unseal' frames the vault and the wall screen). */
   async function openVisit(s: Subject, v: View = s, panelNow = true): Promise<number> {
+    // With no feed data there is no badge to show, so a tap does nothing.
+    if (!deps.model()) return token;
     if (subject === s && view === v) return token;
     const my = ++token;
     hidePanel();
@@ -326,6 +328,9 @@ export function createVisit(deps: VisitDeps): Visit {
       unsealFlight = null;
     },
     unsealStarted() {
+      // The camera already waits at the vault for an earlier unseal: keep that flight, so the
+      // badge opens at the end of this show.
+      if (view === 'unseal' && !panelOpen && unsealFlight === token) return null;
       unsealFlight = null;
       if (subject) return null;
       return openVisit('vault', 'unseal', false).then((my) => {

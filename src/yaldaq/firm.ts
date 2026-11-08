@@ -182,7 +182,11 @@ export function mountFirm(
   function applyLayout(name: 'wide' | 'tall'): void {
     layoutName = name;
     const L = LAYOUTS[name];
-    if (set) scene.remove(set.root);
+    if (set) {
+      // A visit may have hidden pieces of the outgoing set. The set is kept, so show them again.
+      for (const p of set.pieces) p.obj.visible = true;
+      scene.remove(set.root);
+    }
     set = sets.get(name) ?? buildSet(L);
     sets.set(name, set);
     scene.add(set.root);
@@ -513,11 +517,12 @@ export function mountFirm(
       if (active) {
         host.dataset.active = 'true';
         const want = layoutFor();
-        if (want !== layoutName) {
+        const layoutChanged = want !== layoutName;
+        if (layoutChanged) {
           applyLayout(want);
           if (model && clock) resetTo(clock.t);
         }
-        hud.updateInsets();
+        if (!visit.resized(layoutChanged)) hud.updateInsets();
         stage.setRunning(true);
         feed.start();
         if (clock?.live) clock.goLive();

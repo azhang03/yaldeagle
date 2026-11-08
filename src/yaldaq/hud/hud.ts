@@ -127,6 +127,8 @@ export function createHud(host: HTMLElement, opts: { stage: FirmStage; feed: Fee
     el.timeSub.textContent = sub;
     el.pillOpen.hidden = true;
     el.dock.hidden = true;
+    // With no data a tap opens nothing, so the hint does not ask for one.
+    el.hint.hidden = true;
     setHTML(el.recent, '');
     updateInsets();
   }
@@ -141,6 +143,7 @@ export function createHud(host: HTMLElement, opts: { stage: FirmStage; feed: Fee
       foldText();
     } else bar.setModel(m);
     el.dock.hidden = false;
+    el.hint.hidden = false;
     updateInsets();
   }
 
