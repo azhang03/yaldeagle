@@ -78,8 +78,12 @@ export function createFeed(
   async function get(path: string): Promise<Got> {
     try {
       const r = await fetchFn(base + path, { cache: 'no-cache' });
-      if (r.status === 204) return { ok: true, data: null };
-      if (r.status !== 200) return { ok: false };
+      if (r.status !== 200) {
+        // Read the body (empty for a 204). Else the browser cancels the request and logs it as
+        // a failed request.
+        await r.text();
+        return r.status === 204 ? { ok: true, data: null } : { ok: false };
+      }
       const data: unknown = await r.json();
       return isFile(data) ? { ok: true, data } : { ok: false };
     } catch {
