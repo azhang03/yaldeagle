@@ -1,6 +1,6 @@
 // The public face of the cast: buildCharacter makes one character, and playEvent plays the
 // act for one data event.
-import { BoxGeometry, Mesh, MeshBasicMaterial, Vector3 } from 'three';
+import { BoxGeometry, Mesh, MeshBasicMaterial, RingGeometry, Vector3 } from 'three';
 import type { Group } from 'three';
 import type { Actor, FeedEvent } from '../../data/contract';
 import { clamp01 } from '../kit';
@@ -20,7 +20,7 @@ import {
   walkSteps,
 } from './core';
 import type { ActOptions, Builder, CastInfo } from './core';
-import { book } from './rig';
+import { book, buildFolder } from './rig';
 
 export { CAST, PIPELINE } from './core';
 export type { ActOptions, CastInfo } from './core';
@@ -28,6 +28,8 @@ export { buildCoin, buildEnvelope, buildFolder } from './rig';
 export type { EnvelopeObject } from './rig';
 
 const BUILD: Partial<Record<Actor, Builder>> = { ...ACTORS_A, ...ACTORS_B, ...ACTORS_C };
+/** The work light under a character that plays an act. */
+const WORK_RING = new RingGeometry(0.36, 0.46, 48);
 
 /** One character of the cast, as the room uses it. */
 export interface Character {
@@ -51,6 +53,14 @@ export interface Character {
   setCount(n: number): void;
   walkTo(point: Vector3, opts?: { speed?: number; stop?: number }): Promise<boolean>;
   walkHome(opts?: { speed?: number }): Promise<boolean>;
+  /**
+   * Shows or hides the brief folder: on the 'desk' mark of the station while the character
+   * works on a brief, or in the right hand when the station has no desk.
+   */
+  holdBrief(on: boolean): void;
+  holdsBrief(): boolean;
+  /** The world point of the brief folder, for the flight to the envelope. */
+  briefPoint(): Vector3;
   pulse(color?: string): void;
   reset(): void;
 }
@@ -139,31 +149,75 @@ export function buildCharacter(actor: Actor): Character {
     },
     pulse: (color = c.info.color) => pulse(c, color),
     reset: () => reset(c),
+    holdBrief: (on) => void (brief.visible = on),
+    holdsBrief: () => brief.visible,
+    briefPoint: () => (brief.parent === c.rig.body ? c.world(c.rig.handR) : c.world(brief)),
   };
   // A book for the reading idle, in a tint of the actor color.
   c.book = book(c.F, c.rig.body, c.info.color);
   c.book.visible = false;
   c.book.scale.setScalar(1.35);
   c.carry.push({ obj: c.book, hand: 'B', off: [0, 0.06, 0.02], rot: [-0.7, 0, 0] });
+  const brief = buildFolder();
+  brief.visible = false;
+  const desk = c.marks.desk;
+  if (desk) desk.add(brief);
+  else {
+    c.rig.body.add(brief);
+    c.carry.push({ obj: brief, hand: 'R', off: [0, 0.02, 0.06], rot: [-0.5, 0, 0] });
+  }
+  c.resets.push(() => (brief.visible = false));
+  // The work light: a ring on the floor in the actor color. It glows while the character
+  // plays an act, so a visitor sees who works at the moment.
+  const ring = new Mesh(
+    WORK_RING,
+    new MeshBasicMaterial({
+      color: c.info.color,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    }),
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.renderOrder = 1;
+  ring.visible = false;
+  c.root.add(ring);
+  let lit = 0;
+  c.tickers.push((dt) => {
+    const busy = !!c.cur || c.queue.length > 0;
+    // dt 0 is a reset: the light goes out at once.
+    lit = dt === 0 ? 0 : clamp01(lit + (busy ? dt / 0.25 : -dt / 0.6));
+    ring.visible = lit > 0.01;
+    if (!ring.visible) return;
+    const at = c.spaceToRoot(c.figure.position);
+    ring.position.set(at.x, 0.015, at.z);
+    ring.material.opacity = lit * (0.6 + 0.25 * Math.sin(c.time * 4));
+  });
   return character;
 }
 
 /**
  * Plays the local act for one data event of this character's actor. Every call also pulses
- * the floor ring. speed is the replay speed (it sets the length of a Claude call). runTo is a
- * world point: on a network error, the foreman runs there and back. cast is an optional map
- * of actor id to Character: a loop cycle with open markets then also makes the clerk watch
- * the tape, because the trading cycle is the tape check.
+ * the floor ring. speed is the replay speed (it sets the length of a Claude call). dur, when
+ * set, is the wall time of a Claude call (the part that is left). n is the number of the same
+ * events in a run: the controls count one bead or mark for each forecast. runTo is a world
+ * point: on a network error, the foreman runs there and back. cast is an optional map of actor
+ * id to Character: a loop cycle with open markets then also makes the clerk watch the tape,
+ * because the trading cycle is the tape check.
  */
 export function playEvent(
   ch: Character,
   ev: FeedEvent & { end?: number },
   {
     speed = 1,
+    dur,
+    n = 1,
     runTo = null,
     cast = null,
   }: {
     speed?: number;
+    dur?: number;
+    n?: number;
     runTo?: Vector3 | null;
     cast?: Partial<Record<Actor, Character>> | null;
   } = {},
@@ -185,14 +239,14 @@ export function playEvent(
         const real = (Date.parse(ev.t_end ?? '') - Date.parse(ev.t)) / 1000;
         const sec = Number.isFinite(real) && real > 0 ? real : 12;
         return A('call', {
-          dur: Math.max(sec / Math.max(speed, 0.01), 2.5),
+          dur: Math.max(dur ?? sec / Math.max(speed, 0.01), 2.5),
           searches: ev.searches ?? 0,
         });
       }
       break;
     case 'strike_rate':
     case 'base_rate':
-      if (kind === 'forecast') return A('count');
+      if (kind === 'forecast') return A('count', { n });
       break;
     case 'ladder':
       if (kind === 'repair') return A('fix');

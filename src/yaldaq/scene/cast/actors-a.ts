@@ -6,7 +6,21 @@ import type { Material, Sprite } from 'three';
 import type { Actor } from '../../data/contract';
 import { clamp, lerpAngle, smooth, texture } from '../kit';
 import type { Vec3 } from '../kit';
-import { ORIGIN, S, SKIN, bump, env, glow, glyph, lerp, own, ramp, to, walkSteps } from './core';
+import {
+  ORIGIN,
+  S,
+  SKIN,
+  bump,
+  env,
+  glow,
+  glyph,
+  lerp,
+  own,
+  ramp,
+  spawnGlyph,
+  to,
+  walkSteps,
+} from './core';
 import type { Builder, Carry, OwnMesh, Step } from './core';
 import { buildFolder, cap, glasses, hair, rigPerson } from './rig';
 
@@ -251,6 +265,8 @@ export const ACTORS_A: Partial<Record<Actor, Builder>> = {
     housing.add(screen);
     c.mark('prop', [1.04, 1.06, -0.1]);
     c.mark('slot', [0, 0.75, 0.38]);
+    // Where the brief folder lies while Claude works on it: the shelf of the terminal.
+    c.mark('desk', [0.78, 0.7, 0.12]);
     // Thought dots for 'think'.
     const dots: Sprite[] = [0.05, 0.07, 0.09].map((s) => {
       const d = glyph('dot', T, s);
@@ -297,17 +313,53 @@ export const ACTORS_A: Partial<Record<Actor, Builder>> = {
     ];
     c.def('think', (o) => [think(Math.max(0.6, o.dur ?? 2))]);
     c.def('search', (o) => search(clamp(o.dur ?? 2.4, 1.2, 4)));
-    // A full call: thinking, with one walk for each search spread over it. When the call is
-    // short (fast replay), several searches share one walk.
+    // A full call: Claude walks to the terminal and works there for the whole call. The screen
+    // is lit, the head light blinks, and the thought dots rise. Each web search pops a "?" over
+    // the screen. At the end Claude walks back.
     c.def('call', (o) => {
       const wall = Math.max(o.dur ?? 6, 2.5);
       const n = Math.max(0, Math.round(o.searches ?? 0));
-      const walks = n ? clamp(Math.floor((wall - 0.8) / 1.7), 1, n) : 0;
-      const D = walks ? clamp((wall * 0.7) / walks, 1.6, 3.6) : 0;
-      const part = Math.max(0.6, wall - walks * D) / (walks + 1);
-      const steps = [think(part)];
-      for (let i = 0; i < walks; i++) steps.push(...search(D), think(part));
-      return steps;
+      const hop = clamp(wall * 0.05, 0.16, 0.3);
+      const work = Math.max(1, wall - 4 * hop);
+      let popped = 0;
+      return [
+        ...walkSteps(c, spot, { hop, turn: hop * 0.5, face: 1.75, h: 0.16 }),
+        S(
+          work,
+          (u, p) => {
+            const e = env(u, 0, Math.min(0.2, 0.4 / work), 1 - Math.min(0.15, 0.3 / work), 1);
+            to(p, { lx: -1.3, rx: -1.3, lz: -0.15, rz: -0.15, hp: -0.05 }, e);
+            p.lx += 0.12 * Math.sin(c.time * 28) * e;
+            p.rx += 0.12 * Math.sin(c.time * 28 + Math.PI) * e;
+            p.hr = 0.1 * Math.sin(c.time * 1.7) * e;
+            glow(bulb, '#ff9a6a', (0.55 + 0.45 * Math.sin(c.time * 7)) * e);
+            const h = c.headLocal();
+            dots.forEach((s, i) => {
+              s.visible = true;
+              s.position.set(
+                h.x + 0.26 + i * 0.1,
+                h.y - 0.02 + i * 0.08 + 0.02 * Math.sin(c.time * 5 - i),
+                h.z,
+              );
+              s.material.opacity = e * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(c.time * 5 - i * 1.2)));
+            });
+            // The searches spread over the call.
+            while (popped < n && u >= (popped + 0.5) / n) {
+              popped++;
+              spawnGlyph(c, '?', T, [1.04, 1.34, -0.1], 0.36);
+            }
+          },
+          {
+            start: () => (screen.material = on),
+            end: () => {
+              screen.material = off;
+              dots.forEach((s) => (s.visible = false));
+              glow(bulb, '#ff9a6a', 0);
+            },
+          },
+        ),
+        ...walkSteps(c, ORIGIN, { hop, turn: hop * 0.5, face: 0, h: 0.16 }),
+      ];
     });
     c.resets.push(() => {
       dots.forEach((s) => (s.visible = false));
@@ -356,38 +408,52 @@ export const ACTORS_A: Partial<Record<Actor, Builder>> = {
     c.mark('prop', [0.6, 1.03, 0.02]);
     c.mark('slot', [0.6, 0.45, 0.2]);
     let moved = 0;
-    c.def('count', () => {
-      let bead: Mesh | undefined;
+    // One bead for each forecast of the run (o.n), about 0.3 s each. When the beads run out,
+    // they all slide back first.
+    c.def('count', (o) => {
+      const k = clamp(Math.round(o.n ?? 1), 1, beads.length);
+      const dur = 0.7 + 0.3 * k;
+      const picks: { bead: Mesh; i: number; a: number; b: number }[] = [];
       let reset = false;
       const from: number[] = [];
       return [
         S(
-          1.0,
+          dur,
           (u, p) => {
-            const e = env(u, 0, 0.15, 0.8, 1);
+            const s = u * dur;
+            const e = env(u, 0, 0.25 / dur, 1 - 0.25 / dur, 1);
             c.facing = 0.75 * e;
             to(p, { hy: 0.55, hp: 0.12, lx: -1.25, lz: 0.15 }, e);
             if (reset) {
               beads.forEach(
-                (b, j) => (b.position.x = lerp(from[j] ?? 0, xr(j % 5), smooth(u / 0.3))),
+                (b, j) => (b.position.x = lerp(from[j] ?? 0, xr(j % 5), smooth(s / 0.3))),
               );
             }
-            if (bead) {
-              const i = beads.indexOf(bead) % 5;
-              bead.position.x = lerp(xr(i), xl(i), smooth((u - 0.35) / 0.25));
+            for (const pk of picks) {
+              pk.bead.position.x = lerp(xr(pk.i), xl(pk.i), smooth((s - pk.a) / (pk.b - pk.a)));
             }
-            p.hp += 0.15 * bump(u, 0.55, 0.8);
+            // The hand flicks once for each bead.
+            p.lx +=
+              0.2 *
+              Math.sin((s - 0.3) * (Math.PI / 0.3)) *
+              env(u, 0.3 / dur, 0.35 / dur, 1 - 0.35 / dur, 1 - 0.3 / dur);
+            p.hp += 0.15 * bump(u, 1 - 0.3 / dur, 1 - 0.05 / dur);
           },
           {
             start() {
-              reset = moved >= beads.length;
+              reset = moved + k > beads.length;
               if (reset) {
                 moved = 0;
                 beads.forEach((b, j) => (from[j] = b.position.x));
               }
-              bead = beads[moved];
+              for (let j = 0; j < k; j++) {
+                const bead = beads[moved + j];
+                if (!bead) break;
+                const a = 0.3 + 0.3 * j;
+                picks.push({ bead, i: (moved + j) % 5, a, b: a + 0.22 });
+              }
             },
-            end: () => moved++,
+            end: () => (moved += picks.length),
           },
         ),
       ];
@@ -447,34 +513,39 @@ export const ACTORS_A: Partial<Record<Actor, Builder>> = {
     marks.forEach((m) => (m.visible = false));
     c.mark('prop', [-0.66, 1.06, -0.14]);
     c.mark('slot', [-0.66, 0.5, 0]);
+    // Where the brief folder lies while grandpa works on it: on the seat of the chair.
+    c.mark('desk', [-0.66, 0.58, -0.04]);
     let tally = 0;
-    c.def('count', () => {
-      let shown = false;
+    // One tally mark for each forecast of the run (o.n), about 0.3 s each. A full slate of
+    // five wipes clean first.
+    c.def('count', (o) => {
+      const k = clamp(Math.round(o.n ?? 1), 1, 12);
+      const dur = 0.8 + 0.3 * k;
+      let drawn = 0;
       return [
         S(
-          1.1,
+          dur,
           (u, p) => {
-            const e = env(u, 0, 0.15, 0.8, 1);
+            const s = u * dur;
+            const e = env(u, 0, 0.25 / dur, 1 - 0.25 / dur, 1);
             c.facing = -0.9 * e;
             to(p, { hy: -0.55, hp: 0.05, rx: -1.45, rz: 0.3 }, e);
-            p.rx += 0.12 * Math.sin(u * Math.PI * 8) * env(u, 0.35, 0.45, 0.6, 0.7);
-            st.rotation.x = 0.05 * bump(u, 0.5, 1);
-            if (!shown && u > 0.55) {
-              shown = true;
-              const m = marks[tally];
-              if (m) m.visible = true;
-            }
-            p.hp += 0.15 * bump(u, 0.6, 0.85);
-          },
-          {
-            start() {
+            const w = env(u, 0.3 / dur, 0.4 / dur, 1 - 0.35 / dur, 1 - 0.25 / dur);
+            p.rx += 0.12 * Math.sin(s * Math.PI * 7) * w;
+            st.rotation.x = 0.04 * Math.sin(s * 3) * w;
+            const due = Math.min(k, Math.floor((s - 0.35) / 0.3) + 1);
+            for (; drawn < due; drawn++) {
               if (tally >= marks.length) {
                 tally = 0;
                 marks.forEach((m) => (m.visible = false));
               }
-            },
-            end: () => (tally++, (st.rotation.x = 0)),
+              const m = marks[tally];
+              if (m) m.visible = true;
+              tally++;
+            }
+            p.hp += 0.15 * bump(u, 1 - 0.3 / dur, 1 - 0.05 / dur);
           },
+          { end: () => (st.rotation.x = 0) },
         ),
       ];
     });

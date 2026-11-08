@@ -168,18 +168,31 @@ export function mountFirm(
     onEnd: () => visit.unsealEnded(),
   });
   const tags = createTags(el.tags, { stage, chars, actors: ACTORS });
-  // With a mouse, the cubby under the pointer shows the tag of the envelope in it.
-  let hoverCubby: number | null = null;
+  // With a mouse, the envelope under the pointer (or the envelope in the cubby under it)
+  // shows its tag. The check runs on each pointer move and with each state update, because
+  // envelopes move under a still mouse.
+  let mouse: { x: number; y: number } | null = null;
+  let hoverId: string | null = null;
+  function updateHover(): void {
+    hoverId = mouse ? envelopeAt(mouse.x, mouse.y) : null;
+  }
   stage.canvas.addEventListener('pointermove', (ev) => {
-    if (ev.pointerType !== 'mouse') return;
-    const p = stage.hitPoint(ev.clientX, ev.clientY, locker.root);
-    hoverCubby = p ? locker.cubbyAt(locker.root.worldToLocal(p)) : null;
+    mouse = ev.pointerType === 'mouse' ? { x: ev.clientX, y: ev.clientY } : null;
+    updateHover();
   });
-  stage.canvas.addEventListener('pointerleave', () => (hoverCubby = null));
-  function hoveredEnvelope(): string | null {
-    if (hoverCubby === null) return null;
+  stage.canvas.addEventListener('pointerleave', () => {
+    mouse = null;
+    hoverId = null;
+  });
+  function envelopeAt(x: number, y: number): string | null {
     for (const tok of envelopes.tokens.values()) {
-      if (tok.i === hoverCubby && !tok.trip) return tok.env.id;
+      if (tok.obj.visible && stage.hitPoint(x, y, tok.obj)) return tok.env.id;
+    }
+    const p = stage.hitPoint(x, y, locker.root);
+    const i = p ? locker.cubbyAt(locker.root.worldToLocal(p)) : null;
+    if (i === null) return null;
+    for (const tok of envelopes.tokens.values()) {
+      if (tok.i === i && !tok.trip) return tok.env.id;
     }
     return null;
   }
@@ -307,24 +320,119 @@ export function mountFirm(
   const bubbleText = (ev: TimedEvent, n: number, t = ev.at): string | undefined =>
     eventText(ev, { n, series: seriesOf(ev.envelope) ?? null, t })?.replace(/^[^:]+:\s*/, '');
 
-  function react({ ev, n }: { ev: TimedEvent; n: number }): void {
+  // The choreography of one envelope. The brief folder flies to the three forecasters. Each
+  // one works on it at its station, and when its forecasts are done, the folder flies into
+  // the envelope. The mechanic and the pricer act when the envelope has come to them. A jump
+  // cancels every act that still waits: `gen` counts the jumps.
+  let gen = 0;
+  const FORECASTERS: readonly CastActor[] = ['claude', 'strike_rate', 'base_rate'];
+  /** The landing of the brief folder at each forecaster, from the last brief. */
+  const briefLanded = new Map<CastActor, Promise<void>>();
+  /** The act of these events waits until the envelope arrives at this stage. */
+  const WAIT_STAGE: Partial<Record<string, 'ladder' | 'policy'>> = {
+    'ladder.repair': 'ladder',
+    'policy.pass': 'policy',
+    'policy.order': 'policy',
+  };
+
+  /** The forecasts of one forecaster go into the envelope: its folder flies there. */
+  function sealForecasts(actor: CastActor, envId: string | null | undefined): void {
+    const c = chars[actor];
+    if (!c.holdsBrief()) return;
+    const from = c.briefPoint();
+    c.holdBrief(false);
+    const tok = envId ? envelopes.tokens.get(envId) : undefined;
+    if (!tok?.obj.visible) return;
+    envelopes.fly(
+      () => from.clone(),
+      () => tok.obj.position.clone(),
+      { dur: 0.8 },
+    );
+  }
+
+  /** Plays a Claude call for `dur` seconds of wall time; then the forecasts are sealed. */
+  function playCall(ev: TimedEvent, dur: number): void {
+    const g = gen;
+    void playEvent(chars.claude, ev, { dur }).then((done) => {
+      if (done === true && g === gen) sealForecasts('claude', ev.envelope);
+    });
+  }
+
+  function react(run: { ev: TimedEvent; n: number }): void {
+    const { ev } = run;
     const key = `${ev.actor}.${ev.kind}`;
     if (key === 'vault.unseal') {
       unseal.start(ev);
       return;
     }
     if (!isCast(ev.actor)) return;
+    const g = gen;
+    const stage = WAIT_STAGE[key];
+    let wait: Promise<void> | undefined;
+    if (stage && ev.envelope) wait = envelopes.arrival(ev.envelope, stage);
+    else if (ev.kind === 'forecast' || key === 'claude.call') wait = briefLanded.get(ev.actor);
+    if (!wait) {
+      act(run, 0);
+      return;
+    }
+    const t0 = performance.now();
+    void wait.then(() => {
+      if (g === gen) act(run, (performance.now() - t0) / 1000);
+    });
+  }
+
+  /** The act and the bubble of one run of events. waited: wall seconds since the event. */
+  function act({ ev, n }: { ev: TimedEvent; n: number }, waited: number): void {
+    const key = `${ev.actor}.${ev.kind}`;
+    if (!isCast(ev.actor)) return;
     const actor = ev.actor;
     const c = chars[actor];
+    const speed = clock?.speed ?? 1;
+    if (key === 'claude.call') {
+      pendingCalls.push(ev);
+      const secs = ((ev.end ?? ev.at) - ev.at) / 1000 / speed - waited;
+      tags.say(
+        'claude',
+        `Working: ${short(seriesOf(ev.envelope))}, ${ev.markets ?? 0} markets. The forecasts go into the sealed envelope.`,
+        { secs: Math.max(2.6, secs) },
+      );
+      playCall(ev, secs);
+      return;
+    }
     let runTo: Vector3 | null = null;
     if (ev.kind === 'error') runTo = home[ev.job === 'forecast-new' ? 'scanner' : 'loop'].clone();
     // With the cast map, a loop tick also makes the clerk check the tape for the open markets.
-    void playEvent(c, ev, { speed: clock?.speed ?? 1, runTo, cast: chars });
+    const played = playEvent(c, ev, { speed, n, runTo, cast: chars });
+    if (ev.kind === 'forecast') {
+      const g = gen;
+      void played.then((done) => {
+        if (done === true && g === gen) sealForecasts(actor, ev.envelope);
+      });
+    }
     if (key === 'scanner.cycle') rackFlash = 1;
     if (key === 'brief.brief') {
-      envelopes.fly('brief', 'claude', 0);
-      envelopes.fly('brief', 'strike_rate', 0.15);
-      envelopes.fly('brief', 'base_rate', 0.3);
+      // The folders fly from the librarian to each forecaster's station.
+      const g = gen;
+      FORECASTERS.forEach((a, i) => {
+        const b = chars[a];
+        b.holdBrief(false);
+        briefLanded.set(
+          a,
+          new Promise((resolve) =>
+            envelopes.fly(
+              () => chars.brief.anchor('hand'),
+              () => b.briefPoint(),
+              {
+                delay: 0.15 * i,
+                onArrive: () => {
+                  if (g === gen) b.holdBrief(true);
+                  resolve();
+                },
+              },
+            ),
+          ),
+        );
+      });
     }
     if (key === 'shadow.fill' && ev.envelope) {
       // The clerk sends the fill stamp to the waiting envelope. Its fill badge pops.
@@ -333,19 +441,14 @@ export function mountFirm(
       const cub = i != null ? locker.cub[i] : undefined;
       if (tok && i != null && cub && tok.stage === 'locker' && !tok.trip) {
         const to = locker.root.localToWorld(new Vector3(...cub.front)).setY(0.9);
-        envelopes.flyPoints(chars.shadow.anchor('hand'), to, 1.0, 0.5);
+        const from = chars.shadow.anchor('hand');
+        envelopes.fly(
+          () => from.clone(),
+          () => to,
+          { dur: 1.0, delay: 0.5 },
+        );
         envelopes.tween(0, () => locker.pop(i, 'fills'), 1.6);
       }
-    }
-    if (key === 'claude.call') {
-      pendingCalls.push(ev);
-      const secs = ((ev.end ?? ev.at) - ev.at) / 1000 / (clock?.speed ?? 1);
-      tags.say(
-        'claude',
-        `Working: ${short(seriesOf(ev.envelope))}, ${ev.markets ?? 0} markets. The forecasts go into the sealed envelope.`,
-        { secs: Math.max(2.6, secs) },
-      );
-      return;
     }
     if (QUIET_BUBBLE[key]) return;
     tags.say(actor, bubbleText(ev, n), { err: ev.kind === 'error' });
@@ -359,9 +462,11 @@ export function mountFirm(
     });
   }
 
-  // A jump: set the scene to the state at t, with no motion.
+  // A jump: set the scene to the state at t, with no motion of the past.
   let quietShown: boolean | null = null;
   function resetTo(t: number): void {
+    gen++;
+    briefLanded.clear();
     visit.jumped();
     unseal.cancel();
     envelopes.reset(t);
@@ -375,6 +480,13 @@ export function mountFirm(
     pendingCalls = model
       ? model.events.filter((e) => e.kind === 'call' && e.at <= t && (e.end ?? e.at) > t)
       : [];
+    // A Claude call that runs at t is the state, not a past event: Claude works on it for the
+    // time that is left.
+    const call = pendingCalls[0];
+    if (call && clock) {
+      chars.claude.holdBrief(true);
+      playCall(call, ((call.end ?? call.at) - t) / 1000 / clock.speed);
+    }
     quietShown = null;
   }
 
@@ -483,6 +595,7 @@ export function mountFirm(
         const s = stateAt(model, to);
         applyState(s);
         visit.render(s, jumped);
+        updateHover();
       }
     } else envelopes.update(dt, 0, null);
     hud.update();
@@ -496,7 +609,7 @@ export function mountFirm(
       tokens: envelopes.tokens,
       busy: unseal.token,
       visiting: visit.subject !== null,
-      hover: hoveredEnvelope(),
+      hover: hoverId,
       top: hud.topEdge,
     });
   });

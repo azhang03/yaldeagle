@@ -24,7 +24,7 @@ export interface Tags {
     busy: Token | null;
     /** A visit hides the names and the envelope tags. */
     visiting: boolean;
-    /** The envelope under the mouse pointer: the tag of a resting envelope shows only then. */
+    /** The envelope under the mouse pointer: an envelope shows its tag only then. */
     hover: string | null;
     /** The top edge for the bubbles, in px: the bottom of the pills. */
     top: number;
@@ -171,10 +171,9 @@ export function createTags(
       }
       stackUp(live, top);
 
-      // The envelope tags float over their envelope. An envelope on its way shows its tag. An
-      // envelope that rests in the locker shows it only while the mouse is over its cubby, so
-      // the tags never cover the room. The tags hide during a visit and while the unseal plays.
-      // They take no taps: a tap goes to the room under them.
+      // The envelope tags float over their envelope, only while the mouse is over the
+      // envelope or its cubby, so the tags never cover the room. They hide during a visit and
+      // while the unseal plays. They take no taps: a tap goes to the room under them.
       for (const [id, el] of envTags) {
         if (!tokens.has(id)) {
           el.remove();
@@ -185,13 +184,8 @@ export function createTags(
       for (const tok of tokens.values()) {
         const el = envTags.get(tok.env.id);
         if (!el) continue;
-        const resting = !tok.trip && (tok.stage === 'locker' || tok.stage === 'open');
         const hide =
-          !tok.obj.visible ||
-          visiting ||
-          busy === tok ||
-          !el.firstChild ||
-          (resting && hover !== tok.env.id);
+          !tok.obj.visible || visiting || busy === tok || !el.firstChild || hover !== tok.env.id;
         if (hide) {
           el.style.display = 'none';
           continue;

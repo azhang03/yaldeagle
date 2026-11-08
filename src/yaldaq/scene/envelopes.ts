@@ -37,6 +37,8 @@ const PREV: Readonly<Record<RouteName, Station>> = {
 };
 /** The width of an envelope in room units. The cubbies are 0.69 wide. */
 const ENV_W = 0.42;
+/** An act that waits for an envelope to arrive waits at most this long (wall seconds). */
+const WAIT_MAX_S = 5;
 
 interface Trip {
   s: RouteName;
@@ -90,8 +92,21 @@ export interface Envelopes {
   update(dt: number, t: number, busy: Token | null): void;
   /** Shuts the blast door at once. */
   shutDoor(): void;
-  fly(from: CastActor, to: CastActor, delay?: number): void;
-  flyPoints(from: Vector3, to: Vector3, dur?: number, delay?: number): void;
+  /**
+   * A folder flies from one point to another, in an arc. The points are functions, so the
+   * folder follows a moving hand or envelope. onArrive runs when it lands; a reset drops the
+   * flight and onArrive does not run.
+   */
+  fly(
+    from: () => Vector3,
+    to: () => Vector3,
+    opts?: { dur?: number; delay?: number; onArrive?: () => void },
+  ): void;
+  /**
+   * Resolves when the envelope has arrived at a stage (at once when it rests there or past
+   * it, or is gone). A reset resolves every wait: the caller checks that no jump came between.
+   */
+  arrival(id: string, stage: RouteName): Promise<void>;
   /** A small wall-time tween. fn gets the progress 0 to 1. A reset clears it. */
   tween(dur: number, fn: (k: number) => void, delay?: number): void;
 }
@@ -328,35 +343,30 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
     door.setLamp('shut');
   }
 
-  // Folders fly between the characters: the brief goes out to the three forecasters, and a
-  // fill goes from the clerk to the envelope.
+  // Folders fly between the characters: the brief goes out to the three forecasters, their
+  // forecasts go into the envelope, and a fill goes from the clerk to the envelope.
   const folders: {
     obj: Object3D;
     from: () => Vector3;
     to: () => Vector3;
     t: number;
     dur: number;
+    onArrive?: () => void;
   }[] = [];
   const folderPool: Object3D[] = [];
-  function takeFolder(): Object3D {
+  function fly(
+    from: () => Vector3,
+    to: () => Vector3,
+    {
+      dur = 0.9,
+      delay = 0,
+      onArrive,
+    }: { dur?: number; delay?: number; onArrive?: () => void } = {},
+  ): void {
     const obj = folderPool.pop() ?? buildFolder();
     obj.visible = false;
     scene.add(obj);
-    return obj;
-  }
-  function fly(fromActor: CastActor, toActor: CastActor, delay = 0): void {
-    const a = chars[fromActor];
-    const b = chars[toActor];
-    folders.push({
-      obj: takeFolder(),
-      from: () => a.anchor('hand'),
-      to: () => b.anchor('hand'),
-      t: -delay,
-      dur: 0.9,
-    });
-  }
-  function flyPoints(from: Vector3, to: Vector3, dur = 1.0, delay = 0): void {
-    folders.push({ obj: takeFolder(), from: () => from.clone(), to: () => to, t: -delay, dur });
+    folders.push({ obj, from, to, t: -delay, dur, onArrive });
   }
   function updateFolders(dt: number): void {
     for (let i = folders.length - 1; i >= 0; i--) {
@@ -374,6 +384,7 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
         scene.remove(f.obj);
         folderPool.push(f.obj);
         folders.splice(i, 1);
+        f.onArrive?.();
       }
     }
   }
@@ -490,11 +501,37 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
       door.setLamp(doorOpen > 0.05 ? 'open' : 'shut');
     }
     updateFolders(dt);
+    settleWaits(dt);
+  }
+
+  // Waits for an envelope to arrive at a stage (see arrival()). A wait ends after WAIT_MAX_S
+  // at most, so a token that never makes the trip does not hold an act back.
+  let waits: { id: string; at: number; left: number; resolve: () => void }[] = [];
+  function arrivedAt(tok: Token | undefined, at: number): boolean {
+    return !!tok && !tok.trip && tok.stage !== null && STAGES.indexOf(tok.stage) >= at;
+  }
+  function arrival(id: string, stage: RouteName): Promise<void> {
+    const tok = tokens.get(id);
+    const at = STAGES.indexOf(stage);
+    if (!tok || arrivedAt(tok, at)) return Promise.resolve();
+    return new Promise((resolve) => waits.push({ id, at, left: WAIT_MAX_S, resolve }));
+  }
+  function settleWaits(dt: number): void {
+    if (!waits.length) return;
+    waits = waits.filter((w) => {
+      const tok = tokens.get(w.id);
+      w.left -= dt;
+      if (tok && !arrivedAt(tok, w.at) && w.left > 0) return true;
+      w.resolve();
+      return false;
+    });
   }
 
   function reset(t: number): void {
     tweens = [];
     clearFolders();
+    for (const w of waits) w.resolve();
+    waits = [];
     shutDoor();
     for (let i = 0; i < CUBBIES; i++) clearCubby(i);
     sync(t);
@@ -517,7 +554,7 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
     update,
     shutDoor,
     fly,
-    flyPoints,
+    arrival,
     tween,
   };
 }

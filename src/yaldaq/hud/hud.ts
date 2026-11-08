@@ -41,6 +41,9 @@ const STATUS_WORDS: Record<Exclude<FeedStatus, 'live'>, [string, string]> = {
 
 /** The first part of a series name: "Truth Social posts, daily" gives "Truth Social posts". */
 const short = (series: string): string => series.split(',')[0] ?? '';
+/** The quiet tag. Its title says why the cast reads or naps. */
+const QUIET_TAG =
+  '<span class="yq-tag yq-quiet" title="No work in the last 20 minutes. The cast reads or naps until the next event.">Quiet</span>';
 
 export function createHud(host: HTMLElement, opts: { stage: FirmStage; feed: Feed }): Hud {
   const $ = (id: string): HTMLElement => {
@@ -166,9 +169,9 @@ export function createHud(host: HTMLElement, opts: { stage: FirmStage; feed: Fee
     setHTML(
       el.openSub,
       o
-        ? `${s.quiet ? '<span class="yq-tag yq-quiet">Quiet</span>' : ''}${esc(short(o.series))}<span class="yq-wide-only">, ${fmtClock(o.at)} UTC</span>`
+        ? `${s.quiet ? QUIET_TAG : ''}${esc(short(o.series))}<span class="yq-wide-only">, ${fmtClock(o.at)} UTC</span>`
         : s.quiet
-          ? '<span class="yq-tag yq-quiet">Quiet</span>'
+          ? QUIET_TAG
           : '',
     );
   }
