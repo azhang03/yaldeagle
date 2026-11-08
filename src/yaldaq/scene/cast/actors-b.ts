@@ -76,7 +76,7 @@ export const ACTORS_B: Partial<Record<Actor, Builder>> = {
     c.mark('slot', [0.62, 0.55, 0.15]);
     c.def('fix', () => [
       S(
-        1.6,
+        2.4,
         (u, p) => {
           c.facing = 0.95 * env(u, 0, 0.12, 0.85, 1);
           let tilt;

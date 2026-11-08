@@ -50,14 +50,26 @@ export type EnvelopeObject = Group & { userData: { open(t: number): void } };
 
 /**
  * A sealed envelope of kraft paper with a red wax seal, about 0.35 wide. It stands up and faces +z.
- * userData.open(t) opens the flap (t 0 to 1), and a card comes up out of it.
+ * userData.open(t) opens it (t 0 to 1): the flap folds back over the top, behind the envelope,
+ * and a letter with printed lines comes up out of it in front of the flap.
  */
 export function buildEnvelope(): EnvelopeObject {
   const k = kit(PAINT);
   const W = 0.35;
   const H = 0.22;
   k.box([W, H, 0.014], [0, 0, 0], KRAFT);
-  const card = k.box([W - 0.05, H - 0.04, 0.006], [0, 0, 0], '#fbf8f1');
+  // The letter: a white sheet inside the envelope. The lines are on its upper part, which
+  // shows when it comes out.
+  const card = k.sub([0, 0, 0]);
+  k.box([W - 0.05, H - 0.04, 0.006], [0, 0, 0], '#fbf8f1', null, card);
+  k.box([0.2, 0.016, 0.002], [-0.02, 0.066, 0.004], '#b3261e', null, card);
+  for (const [w, y] of [
+    [0.22, 0.04],
+    [0.18, 0.018],
+    [0.21, -0.004],
+  ] as const) {
+    k.box([w, 0.01, 0.002], [-0.02 - (0.22 - w) / 2, y, 0.004], '#6b5a44', null, card);
+  }
   const flap = k.sub([0, H / 2, 0.008]);
   const tri = new Mesh(triPrism([-W / 2, 0], [0, -0.13], [W / 2, 0], 0.006), PAINT('#b8925a'));
   tri.castShadow = true;
@@ -66,8 +78,8 @@ export function buildEnvelope(): EnvelopeObject {
   k.cyl(0.026, 0.014, [0, -0.112, 0.014], '#8e1b15', [Math.PI / 2, 0, 0], flap);
   const open = (t: number): void => {
     t = clamp01(t);
-    flap.rotation.x = -Math.PI * 0.92 * t;
-    card.position.y = 0.1 * clamp01((t - 0.4) / 0.6);
+    flap.rotation.x = Math.PI * 0.92 * t;
+    card.position.y = 0.11 * clamp01((t - 0.4) / 0.6);
   };
   return Object.assign(k.g, { userData: Object.assign(k.g.userData, { open }) });
 }

@@ -20,6 +20,7 @@ import {
   type State,
   type TimedEvent,
 } from './model';
+import { fmtClock } from './format';
 import { boardAt, type Board } from './scores';
 import { ROLE, eventText, jobStatus, mergeRuns, type JobTone } from './text';
 
@@ -46,8 +47,11 @@ export type Subject = (typeof SUBJECTS)[number];
 
 /** The bars of the activity strip: 48 half hours. */
 const BINS = 48;
-/** An actor "works now" when it had an event in this time. */
-const NOW_MS = 2 * 60e3;
+/**
+ * An actor "works now" for this long after its event. The events are single moments, and the
+ * act in the room lasts a few seconds, so the badge says "Now" only that long.
+ */
+const NOW_MS = 10e3;
 /** A pause of the trading loop longer than this is a gap. */
 const LOOP_GAP_MS = 15 * 60e3;
 /** A new run of network errors starts after this long with no error. */
@@ -223,7 +227,7 @@ function logOf(model: Model, events: readonly TimedEvent[], t: number, size = 8)
     .filter((x) => x.text);
 }
 
-/** The status line of an actor from its last event: works now, or quiet. */
+/** The status line of an actor from its last event: works now, or done and waiting. */
 function activity(
   events: readonly TimedEvent[],
   t: number,
@@ -234,7 +238,7 @@ function activity(
   if (!last) return { tone: 'idle', text: 'No events yet' };
   return {
     tone: t - last.at > QUIET_AFTER_MS ? 'quiet' : 'ok',
-    text: 'Waiting for the next event',
+    text: `Done at ${fmtClock(last.at)} UTC, waiting for the next event`,
   };
 }
 

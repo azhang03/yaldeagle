@@ -287,7 +287,10 @@ export function createEnvelopes(deps: EnvelopeDeps): Envelopes {
     o.rotation.set(0, AZ, 0);
     o.userData.open(s === 'open' ? 1 : 0);
     if (s === 'locker' || s === 'open') cubbyOf(tok, t);
-    if (s) o.position.copy(stationPoint(s === 'open' ? 'locker' : s, tok.i));
+    if (s === 'open') {
+      const c = locker.cub[tok.i ?? 0];
+      o.position.copy(locker.root.localToWorld(c ? new Vector3(...c.openSlot) : new Vector3()));
+    } else if (s) o.position.copy(stationPoint(s, tok.i));
     if (tok.i != null) {
       locker.setLit(tok.i, s === 'locker' ? 'sealed' : s === 'open' ? 'open' : 'off');
       locker.setDoor(tok.i, s === 'open' ? 1 : 0);

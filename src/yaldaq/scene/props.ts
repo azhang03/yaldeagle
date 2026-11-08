@@ -29,6 +29,8 @@ export interface Cubby {
   badges: Mesh[];
   /** Where an envelope rests, in locker space. */
   slot: Vec3;
+  /** Where an opened envelope rests: lower, so its letter shows under the shelf above. */
+  openSlot: Vec3;
   /** The floor point in front of the cubby, in locker space. */
   front: Vec3;
   pops: { b: Mesh; t: number }[];
@@ -139,6 +141,7 @@ export function buildLocker(): Locker {
       pivot,
       badges,
       slot: [x, y0 + 0.28 * BADGE, -0.02],
+      openSlot: [x, y0 + 0.28 * BADGE - 0.08, -0.02],
       front: [x, 0, D / 2 + 0.45],
       pops: [],
     });

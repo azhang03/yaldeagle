@@ -56,6 +56,8 @@ export function createUnseal(deps: {
     t: number;
     slot: Vector3;
     up: Vector3;
+    /** Where the opened envelope rests at the end: lower in the cubby, so its letter shows. */
+    rest: Vector3;
     /** True while the show waits for onStart. */
     wait: boolean;
   }
@@ -87,7 +89,8 @@ export function createUnseal(deps: {
       tok.obj.position.copy(locker.root.localToWorld(new Vector3(...c.slot)));
       const slot = tok.obj.position.clone();
       const up = locker.root.localToWorld(new Vector3(c.slot[0], locker.H + 0.5, 0.55));
-      const mine: Seq = { tok, i, t: 0, slot, up, wait: false };
+      const rest = locker.root.localToWorld(new Vector3(...c.openSlot));
+      const mine: Seq = { tok, i, t: 0, slot, up, rest, wait: false };
       seq = mine;
       const hold = deps.onStart?.();
       if (hold) {
@@ -126,7 +129,7 @@ export function createUnseal(deps: {
       if (s >= T.flapFrom) o.userData.open(smooth((s - T.flapFrom) / (T.flapTo - T.flapFrom)));
       if (s >= T.backFrom) {
         const k = ease((s - T.backFrom) / (T.backTo - T.backFrom));
-        o.position.lerpVectors(seq.up, seq.slot, k);
+        o.position.lerpVectors(seq.up, seq.rest, k);
         o.scale.setScalar(tok.base * (GROW - (GROW - 1) * k));
       }
       if (s >= T.end) {
