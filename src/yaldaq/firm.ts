@@ -30,6 +30,7 @@ import {
 import { LAYOUTS, PAL, buildSet, type FirmSet, type Spot } from './scene/set';
 import { createFirmStage } from './scene/stage';
 import { createUnseal } from './scene/unseal';
+import { createVisit } from './visit';
 
 export interface Firm {
   setActive(active: boolean): void;
@@ -86,12 +87,11 @@ const SKELETON = `
 
 /**
  * Mounts the firm into `host`. The firm starts hidden: setActive(true) shows it, starts its
- * frame loop, and starts the feed. The firm has no visits yet, so it does not call
- * onVisitChange.
+ * frame loop, and starts the feed. opts.onVisitChange runs when a visit starts or ends.
  */
 export function mountFirm(
   host: HTMLElement,
-  _opts: { onVisitChange(visiting: boolean): void },
+  opts: { onVisitChange(visiting: boolean): void },
 ): Firm {
   host.innerHTML = SKELETON;
   const $ = (id: string): HTMLElement => {
@@ -158,8 +158,22 @@ export function mountFirm(
     addHit: (obj) => stage.addHit(obj, { subject: 'vault' }),
     removeHit: (obj) => stage.removeHit(obj),
   });
-  const unseal = createUnseal({ locker, door, envelopes });
-  const tags = createTags(el.tags, { stage, chars, actors: ACTORS, locker });
+  // The unseal flies the camera to the vault first, when no visit runs. At its end the vault
+  // badge opens.
+  const unseal = createUnseal({
+    locker,
+    door,
+    envelopes,
+    onStart: () => visit.unsealStarted(),
+    onEnd: () => visit.unsealEnded(),
+  });
+  const tags = createTags(el.tags, {
+    stage,
+    chars,
+    actors: ACTORS,
+    locker,
+    onEnvTap: () => visit.open('vault'),
+  });
 
   function place(obj: Object3D, s: Spot): void {
     obj.position.copy(at(s[0], s[1]));
@@ -168,7 +182,11 @@ export function mountFirm(
   function applyLayout(name: 'wide' | 'tall'): void {
     layoutName = name;
     const L = LAYOUTS[name];
-    if (set) scene.remove(set.root);
+    if (set) {
+      // A visit may have hidden pieces of the outgoing set. The set is kept, so show them again.
+      for (const p of set.pieces) p.obj.visible = true;
+      scene.remove(set.root);
+    }
     set = sets.get(name) ?? buildSet(L);
     sets.set(name, set);
     scene.add(set.root);
@@ -191,14 +209,30 @@ export function mountFirm(
 
   // The overlays. They cover the top and the bottom of the screen.
   const hud = createHud(host, { stage, feed });
+  const visit = createVisit({
+    host,
+    stage,
+    chars,
+    actors: ACTORS,
+    home,
+    locker,
+    board,
+    ops,
+    tape,
+    set: () => set,
+    model: () => model,
+    updateInsets: () => hud.updateInsets(),
+    onChange: (visiting) => opts.onVisitChange(visiting),
+  });
   const ro = new ResizeObserver(() => {
     if (!isActive()) return;
     const want = layoutFor();
-    if (want !== layoutName) {
+    const layoutChanged = want !== layoutName;
+    if (layoutChanged) {
       applyLayout(want);
       if (model && clock) resetTo(clock.t);
     }
-    hud.updateInsets();
+    if (!visit.resized(layoutChanged)) hud.updateInsets();
   });
   for (const x of [...hud.observed, host]) ro.observe(x);
 
@@ -319,6 +353,7 @@ export function mountFirm(
   // A jump: set the scene to the state at t, with no motion.
   let quietShown: boolean | null = null;
   function resetTo(t: number): void {
+    visit.jumped();
     unseal.cancel();
     envelopes.reset(t);
     rackFlash = 0;
@@ -395,6 +430,7 @@ export function mountFirm(
     const m = feed.model;
     if (!m) {
       if (model) {
+        visit.leave();
         model = null;
         clock = null;
         unseal.cancel();
@@ -427,6 +463,7 @@ export function mountFirm(
       else {
         for (const run of mergeRuns(eventsBetween(model, from, to))) react(run);
         checkCalls(to);
+        visit.frame(from, to);
       }
       envelopes.update(dt, to, unseal.token);
       unseal.update(dt, to);
@@ -434,7 +471,9 @@ export function mountFirm(
       if (jumped || now - lastState > STATE_EVERY_MS) {
         lastState = now;
         envelopes.sync(to);
-        applyState(stateAt(model, to));
+        const s = stateAt(model, to);
+        applyState(s);
+        visit.render(s, jumped);
       }
     } else envelopes.update(dt, 0, null);
     hud.update();
@@ -449,7 +488,7 @@ export function mountFirm(
       layout: LAYOUTS[layoutName],
       t: clock?.t ?? 0,
       busy: unseal.token,
-      visiting: false,
+      visiting: visit.subject !== null,
       top: hud.topEdge,
     });
   });
@@ -478,11 +517,12 @@ export function mountFirm(
       if (active) {
         host.dataset.active = 'true';
         const want = layoutFor();
-        if (want !== layoutName) {
+        const layoutChanged = want !== layoutName;
+        if (layoutChanged) {
           applyLayout(want);
           if (model && clock) resetTo(clock.t);
         }
-        hud.updateInsets();
+        if (!visit.resized(layoutChanged)) hud.updateInsets();
         stage.setRunning(true);
         feed.start();
         if (clock?.live) clock.goLive();
@@ -493,6 +533,6 @@ export function mountFirm(
         host.dataset.active = 'false';
       }
     },
-    inVisit: () => false,
+    inVisit: () => visit.subject !== null,
   };
 }
