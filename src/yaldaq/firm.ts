@@ -10,21 +10,11 @@ import { createClock, type Clock } from './data/clock';
 import type { Actor } from './data/contract';
 import { createFeed } from './data/feed';
 import { DEV_FEED_URL, FEED_URL } from './data/feed-paths';
-import { dayOf, fmtClock, fmtCountdown, fmtDay } from './data/format';
-import {
-  LIVE_DELAY_MS,
-  STALE_FEED_MS,
-  eventsBetween,
-  recent,
-  stateAt,
-  type Model,
-  type State,
-  type TimedEvent,
-} from './data/model';
+import { eventsBetween, stateAt, type Model, type State, type TimedEvent } from './data/model';
 import { boardAt } from './data/scores';
 import { esc, eventText, jobStatus, mergeRuns } from './data/text';
-import { setHTML } from './hud/dom';
-import { recentHTML } from './hud/html';
+import { fmtClock, fmtCountdown, fmtDay } from './data/format';
+import { createHud } from './hud/hud';
 import { createTags } from './hud/tags';
 import { CAST, buildCharacter, playEvent, type Character } from './scene/cast';
 import { createEnvelopes, type CastActor } from './scene/envelopes';
@@ -112,15 +102,6 @@ export function mountFirm(
   const el = {
     stage: $('yq-stage'),
     tags: $('yq-tags'),
-    pillTime: $('yq-pill-time'),
-    timeClock: $('yq-time-clock'),
-    timeSub: $('yq-time-sub'),
-    pillOpen: $('yq-pill-open'),
-    openCount: $('yq-open-count'),
-    openSub: $('yq-open-sub'),
-    recent: $('yq-recent'),
-    hint: $('yq-hint'),
-    dock: $('yq-dock'),
   };
   const isActive = (): boolean => host.dataset.active === 'true';
 
@@ -205,23 +186,8 @@ export function mountFirm(
   }
   applyLayout(layoutName);
 
-  // The insets: the overlays cover the top and the bottom of the screen.
-  let pillsBottom = 0;
-  function updateInsets(): void {
-    const wide = innerWidth > innerHeight;
-    pillsBottom = Math.max(
-      el.pillTime.getBoundingClientRect().bottom,
-      el.pillOpen.hidden ? 0 : el.pillOpen.getBoundingClientRect().bottom,
-    );
-    // The last 24 hours: between the pills on a wide screen, under them on a tall screen.
-    el.recent.style.top = wide ? '' : `${pillsBottom + 6}px`;
-    // Leave room at the top for the envelope tags over the vault.
-    const strip = el.recent.getBoundingClientRect();
-    const top = Math.max(pillsBottom, strip.bottom) + (wide ? 4 : 24);
-    const d = el.dock.getBoundingClientRect();
-    const bottom = d.height ? innerHeight - d.top + 4 : 0;
-    stage.setInsets({ top, bottom, left: 0, right: 0 });
-  }
+  // The overlays. They cover the top and the bottom of the screen.
+  const hud = createHud(host, { stage, feed });
   const ro = new ResizeObserver(() => {
     if (!isActive()) return;
     const want = layoutFor();
@@ -229,9 +195,9 @@ export function mountFirm(
       applyLayout(want);
       if (model && clock) resetTo(clock.t);
     }
-    updateInsets();
+    hud.updateInsets();
   });
-  for (const x of [el.dock, el.pillTime, el.pillOpen, el.recent, host]) ro.observe(x);
+  for (const x of [...hud.observed, host]) ro.observe(x);
 
   // The wall screen. It counts up when the number of settled markets grows during play.
   let boardShown: BoardValues = EMPTY_BOARD;
@@ -371,20 +337,10 @@ export function mountFirm(
     for (const a of ACTORS) chars[a].setIdle(quiet ? (READERS[a] ? 'read' : 'nap') : 'idle');
   }
 
-  /** The pills with no model: the state of the feed. */
+  /** With no model: the feed's state in the pills, and the cast reads or naps. */
   function applyFeedStatus(): void {
-    const words: Record<string, [string, string]> = {
-      connecting: ['Connecting', 'Loading the feed.'],
-      empty: ['No news yet', 'The feed has no data yet. The page checks each minute.'],
-      offline: ['Offline', 'The feed did not answer. The page tries again each minute.'],
-    };
-    const [bold, sub] = words[feed.status] ?? words.connecting ?? ['', ''];
-    el.timeClock.textContent = bold;
-    el.timeSub.textContent = sub;
-    el.pillOpen.hidden = true;
-    setHTML(el.recent, '');
+    hud.showStatus(feed.status === 'live' ? 'connecting' : feed.status);
     setQuiet(true);
-    updateInsets();
   }
 
   // The state at the shown time, a few times each second.
@@ -392,32 +348,7 @@ export function mountFirm(
     if (!model || !clock) return;
     const t = s.t;
     boardWant = boardValues(t);
-    setHTML(
-      el.recent,
-      recentHTML(recent(model, t), { compact: true, row: innerWidth > innerHeight }),
-    );
-    // The pills.
-    el.timeClock.textContent = `${fmtClock(t, true)} UTC`;
-    let tag = '<span class="yq-tag">Replay</span>';
-    if (clock.live) {
-      const nowMs = Date.now();
-      if (nowMs - model.asOf > STALE_FEED_MS) {
-        const day = dayOf(model.asOf) === dayOf(nowMs) ? '' : `${fmtDay(model.asOf)} `;
-        tag = `<span class="yq-tag yq-quiet">No news since ${day}${fmtClock(model.asOf)} UTC</span>`;
-      } else {
-        tag = `<span class="yq-tag yq-live">Live, ${LIVE_DELAY_MS / 60e3} min behind</span>`;
-      }
-    }
-    setHTML(el.timeSub, `${fmtDay(t)} ${tag}`);
-    const o = s.nextOpening;
-    el.pillOpen.hidden = false;
-    el.openCount.textContent = o ? `Next opening ${fmtCountdown(o.at - t)}` : '';
-    setHTML(
-      el.openSub,
-      o
-        ? `${s.quiet ? '<span class="yq-tag yq-quiet">Quiet</span>' : ''}${esc(short(o.series))}<span class="yq-wide-only">, ${fmtClock(o.at)} UTC</span>`
-        : '',
-    );
+    hud.applyState(s);
     // The envelope tags and the badges in the cubbies: counts only, never numbers.
     const byId = new Map(s.envelopes.map((e) => [e.id, e]));
     let waiting = 0;
@@ -477,6 +408,7 @@ export function mountFirm(
       return { start: b.start, end: b.end };
     });
     envelopes.setModel(m, clock.t);
+    hud.setModel(m, clock);
     lastState = 0;
   }
   feed.onChange(onFeed);
@@ -502,6 +434,7 @@ export function mountFirm(
         applyState(stateAt(model, to));
       }
     } else envelopes.update(dt, 0, null);
+    hud.update();
     updateBoard(dt);
     locker.update(dt);
     if (rackFlash > 0) {
@@ -514,7 +447,7 @@ export function mountFirm(
       t: clock?.t ?? 0,
       busy: unseal.token,
       visiting: false,
-      top: pillsBottom + 6,
+      top: hud.topEdge,
     });
   });
   // The firm starts hidden: setActive(true) starts the frame loop.
@@ -526,7 +459,6 @@ export function mountFirm(
     else if (isActive()) feed.start();
   });
 
-  let hintShown = false;
   if (new URLSearchParams(location.search).has('debug')) {
     Reflect.set(window, 'yaldaq', {
       feed,
@@ -547,14 +479,11 @@ export function mountFirm(
           applyLayout(want);
           if (model && clock) resetTo(clock.t);
         }
-        updateInsets();
+        hud.updateInsets();
         stage.setRunning(true);
         feed.start();
         if (clock?.live) clock.goLive();
-        if (!hintShown) {
-          hintShown = true;
-          setTimeout(() => el.hint.classList.add('gone'), 9000);
-        }
+        hud.shown();
       } else {
         feed.stop();
         stage.setRunning(false);
