@@ -113,7 +113,10 @@ body.visiting-view #view-toggle {
   display: none;
 }
 
+/* No taps during the lift. Some parts of the views set pointer-events themselves. */
 body.lifting #nick,
-body.lifting #yaldaq {
-  pointer-events: none;
+body.lifting #yaldaq,
+body.lifting #nick *,
+body.lifting #yaldaq * {
+  pointer-events: none !important;
 }

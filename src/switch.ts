@@ -63,7 +63,7 @@ export function startSwitch(): void {
         return firm;
       },
       (err: unknown) => {
-        // A later click tries again.
+        // A later click asks again. Some browsers keep a failed module until the page reloads.
         firmLoad = null;
         throw err;
       },
@@ -107,9 +107,11 @@ export function startSwitch(): void {
     try {
       target = await create(view);
     } catch (err) {
-      // The firm's code did not load (for example, the network dropped). Stay on this view.
+      // The firm's code did not load (for example, the network dropped). Stay on this view. The
+      // back button changed the address already: put it back.
       console.warn('The view did not load.', err);
       toggle.removeAttribute('aria-busy');
+      if (!push) history.replaceState(null, '', pathFor(from));
       lifting = false;
       return;
     }
@@ -165,8 +167,20 @@ export function startSwitch(): void {
     containers.nick.dataset.active = 'false';
     document.title = FIRM_TITLE;
     create('yaldaq').then(
-      (firm) => firm.setActive(true),
-      (err: unknown) => console.warn('The YALDAQ view did not load.', err),
+      (firm) => {
+        // A click on "Nick" can come before the firm's code loads. Then the firm stays off.
+        if (shown === 'yaldaq' && !lifting) firm.setActive(true);
+      },
+      (err: unknown) => {
+        console.warn('The YALDAQ view did not load.', err);
+        if (shown !== 'yaldaq' || lifting) return;
+        // Show Nick's room, so the page is not blank.
+        shown = 'nick';
+        history.replaceState(null, '', pathFor('nick'));
+        document.title = nickTitle;
+        setPressed('nick');
+        void create('nick').then((nick) => nick.setActive(true));
+      },
     );
     return;
   }
