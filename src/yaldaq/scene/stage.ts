@@ -75,6 +75,8 @@ export interface FirmStage {
   setInsets(i: Partial<Insets>): void;
   size(): { width: number; height: number };
   addHit(obj: Object3D, data: HitInfo): void;
+  /** Unmarks an object that leaves the scene, so a tap can no longer find it. */
+  removeHit(obj: Object3D): void;
   pick(clientX: number, clientY: number): HitInfo | null;
   onTap(fn: TapHandler): void;
   /** Canvas px of a world point. `behind` is true when the point is behind the camera. */
@@ -283,6 +285,10 @@ export function createFirmStage(
     obj.userData.hit = data;
     hits.push(obj);
   }
+  function removeHit(obj: Object3D): void {
+    const i = hits.indexOf(obj);
+    if (i >= 0) hits.splice(i, 1);
+  }
   function pick(clientX: number, clientY: number): HitInfo | null {
     const r = canvas.getBoundingClientRect();
     ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
@@ -412,6 +418,7 @@ export function createFirmStage(
     },
     size: () => ({ width, height }),
     addHit,
+    removeHit,
     pick,
     onTap: (fn) => {
       tapHandlers.push(fn);
