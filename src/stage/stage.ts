@@ -42,6 +42,8 @@ export interface Stage {
   viewport(): { width: number; height: number };
   /** Starts the frame loop. Each frame calls `update` with the time step in seconds. */
   start(update: (dt: number) => void): void;
+  /** Stops or starts the frame loop again. Before `start`, true does nothing. */
+  setRunning(running: boolean): void;
 }
 
 export function createStage(container: HTMLElement, options: StageOptions): Stage {
@@ -128,16 +130,24 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
   }
   watchPixelRatio();
 
+  let frame: ((time: number) => void) | null = null;
+
   function start(update: (dt: number) => void): void {
     const timer = new Timer();
     // With the document connected, the timer ignores the time while the tab is hidden.
     timer.connect(document);
-    renderer.setAnimationLoop((time) => {
+    frame = (time) => {
       timer.update(time);
-      // The first step after a start or a hidden tab can be slightly below 0.
+      // The first step after a start, a pause, or a hidden tab can be large or slightly below 0.
       update(MathUtils.clamp(timer.getDelta(), 0, MAX_DT));
       renderer.render(scene, camera);
-    });
+    };
+    renderer.setAnimationLoop(frame);
+  }
+
+  function setRunning(running: boolean): void {
+    if (!frame) return;
+    renderer.setAnimationLoop(running ? frame : null);
   }
 
   return {
@@ -148,6 +158,7 @@ export function createStage(container: HTMLElement, options: StageOptions): Stag
     aspect: () => width / height,
     viewport: () => ({ width, height }),
     start,
+    setRunning,
   };
 }
 
