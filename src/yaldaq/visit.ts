@@ -166,7 +166,8 @@ export function createVisit(deps: VisitDeps): Visit {
       } else h = Math.max(f.span / 0.85 / a, 1.2);
       fy = 0.08;
     } else if (b) {
-      const pillsBottom = Math.max(...pills.map((p) => p.getBoundingClientRect().bottom));
+      const y0 = host.getBoundingClientRect().top;
+      const pillsBottom = Math.max(...pills.map((p) => p.getBoundingClientRect().bottom)) - y0;
       const top = (pillsBottom + 8) / height;
       const bottom = clamp(b.top / height, top + 0.2, 0.95);
       h = Math.max(f.span / (big ? 1.9 : 2.6) / a, (big ? 1.5 : 0.85) / (bottom - top));
@@ -233,7 +234,11 @@ export function createVisit(deps: VisitDeps): Visit {
     const r = badgeEl.querySelector('.b-card')?.getBoundingClientRect();
     badgeEl.classList.remove('measure');
     badgeEl.hidden = was;
-    return drawn && r ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+    // The box is in the firm's container, which a view lift can move.
+    const h0 = host.getBoundingClientRect();
+    return drawn && r
+      ? { left: r.left - h0.left, top: r.top - h0.top, width: r.width, height: r.height }
+      : null;
   }
   function showPanel(): void {
     badgeEl.classList.remove('in', 'out');

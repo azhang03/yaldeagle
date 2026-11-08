@@ -101,19 +101,23 @@ export function createHud(host: HTMLElement, opts: { stage: FirmStage; feed: Fee
   let topEdge = 0;
   function updateInsets(): void {
     const wide = innerWidth > innerHeight;
-    const pillsBottom = Math.max(
-      el.pillTime.getBoundingClientRect().bottom,
-      el.pillOpen.hidden ? 0 : el.pillOpen.getBoundingClientRect().bottom,
-    );
+    // Measure from the top of the firm's container, not the screen: the view lift moves the
+    // container with a transform while the firm already shows.
+    const y0 = host.getBoundingClientRect().top;
+    const pillsBottom =
+      Math.max(
+        el.pillTime.getBoundingClientRect().bottom,
+        el.pillOpen.hidden ? 0 : el.pillOpen.getBoundingClientRect().bottom,
+      ) - y0;
     // The last 24 hours: between the pills on a wide screen, under them on a tall screen.
     el.recent.style.top = wide ? '' : `${pillsBottom + 6}px`;
     const strip = el.recent.getBoundingClientRect();
-    const stripBottom = strip.height ? strip.bottom : 0;
+    const stripBottom = strip.height ? strip.bottom - y0 : 0;
     topEdge = Math.max(pillsBottom, stripBottom) + 6;
     // Leave room at the top for the envelope tags over the vault.
     const top = Math.max(pillsBottom, stripBottom) + (wide ? 4 : 24);
     const d = el.dock.getBoundingClientRect();
-    const bottom = d.height ? innerHeight - d.top + 4 : 0;
+    const bottom = d.height ? innerHeight - (d.top - y0) + 4 : 0;
     stage.setInsets({ top, bottom, left: 0, right: 0 });
   }
 

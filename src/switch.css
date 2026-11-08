@@ -1,0 +1,122 @@
+/* The view toggle at the top of the page, and the slab of the elevator lift. */
+
+#view-toggle {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 40;
+  display: flex;
+  box-sizing: border-box;
+  width: 200px;
+  height: 40px;
+  padding: 4px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(20, 24, 40, 0.18);
+  font:
+    700 13px system-ui,
+    sans-serif;
+  transform: translateX(-50%);
+  transition: opacity 0.2s ease;
+}
+
+#view-toggle[hidden] {
+  display: none;
+}
+
+#view-toggle button {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  color: #4a505a;
+  font: inherit;
+  cursor: pointer;
+  transition: color 0.35s ease;
+}
+
+#view-toggle button:focus-visible {
+  outline: 2px solid #4a7bd0;
+  outline-offset: 2px;
+}
+
+#view-toggle button[data-view='nick'][aria-pressed='true'] {
+  color: #2a2208;
+}
+
+#view-toggle button[data-view='yaldaq'][aria-pressed='true'] {
+  color: #ffffff;
+}
+
+/* The knob sits under the button of the shown view. */
+#view-toggle .knob {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: 32px;
+  border-radius: 16px;
+  background: #e0a010;
+  transition:
+    transform 0.35s ease,
+    background-color 0.35s ease;
+}
+
+#view-toggle:has(button[data-view='yaldaq'][aria-pressed='true']) .knob {
+  background: #121a33;
+  transform: translateX(100%);
+}
+
+/* The firm's code loads. */
+#view-toggle[aria-busy='true'] .knob {
+  animation: view-knob-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes view-knob-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* During a visit the toggle steps aside. */
+body.visiting-view #view-toggle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The floor slab between the two views during the lift. switch.ts sets its height and place. */
+#lift-slab {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  border-top: 3px solid #d3d7dc;
+  border-bottom: 2px solid #262a31;
+  background: linear-gradient(#9aa1ab, #5d636d 45%, #3a3f48);
+  color: #eef0f3;
+  font:
+    700 11px system-ui,
+    sans-serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+#lift-slab[hidden] {
+  display: none;
+}
+
+/* No taps during the lift. Some parts of the views set pointer-events themselves. */
+body.lifting #nick,
+body.lifting #yaldaq,
+body.lifting #nick *,
+body.lifting #yaldaq * {
+  pointer-events: none !important;
+}
