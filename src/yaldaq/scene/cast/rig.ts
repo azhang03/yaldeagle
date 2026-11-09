@@ -1,13 +1,53 @@
 // The parts of the cast: the small objects that fly between characters, the figure rig,
-// and the gear (hair, caps, glasses, and hand tools).
+// the gear (hair, caps, glasses, and hand tools), and the wing of a station's desk.
 import { BufferAttribute, BufferGeometry, Mesh } from 'three';
 import type { Group, Object3D } from 'three';
 import { clamp01, kit } from '../kit';
 import type { Kit } from '../kit';
+import { monitor } from '../set';
 import { KRAFT, PAINT, WAX } from './core';
 import type { Rig } from './core';
 
 type Point = readonly [number, number];
+
+/** The wood of the desks at the stations. */
+const DESK_TOP = '#8a5a35';
+const DESK_LEG = '#6e4628';
+
+/**
+ * A wing that joins the end of a station's desk, with two monitors turned in toward the
+ * character. All values are in the character's space (it stands at the origin and faces +z).
+ * side: the end of the desk (-1 the left, +1 the right). edge: the |x| of that end. front: the z
+ * of the desk's front edge; the wing goes back from there by depth. top: the height of the
+ * desk top. body: a solid body in this color, as under a counter; with no body, it has legs.
+ */
+export function deskWing(
+  P: Kit,
+  o: { side: 1 | -1; edge: number; front: number; depth: number; top: number; body?: string },
+): void {
+  const { side: s, edge, front, depth, top } = o;
+  const w = 0.55;
+  const x = s * (edge + w / 2);
+  const z = front - depth / 2;
+  const h = top - 0.05;
+  P.box([w, 0.05, depth], [x, top - 0.025, z], DESK_TOP);
+  if (o.body) {
+    // Set in 0.02 at the outer side. The inner side reaches 0.03 in under the desk top, so it
+    // meets a body that is set in under the top, as the pricer's counter is.
+    const bw = w + 0.01;
+    P.box([bw, h, depth - 0.04], [s * (edge - 0.03 + bw / 2), h / 2, z], o.body);
+  } else {
+    // Two legs at the outer end and one at the inner back. The inner front corner rests on
+    // the desk. The inner back leg stands in from the edge, clear of the character's hand.
+    const outer = s * (edge + w - 0.04);
+    const back = front - depth + 0.04;
+    P.box([0.05, h, 0.05], [outer, h / 2, front - 0.04], DESK_LEG);
+    P.box([0.05, h, 0.05], [outer, h / 2, back], DESK_LEG);
+    P.box([0.05, h, 0.05], [s * (edge + 0.12), h / 2, back], DESK_LEG);
+  }
+  monitor(P, [x, top, z - depth * 0.2], -s * 0.55, 0, 0.42, 0.26);
+  monitor(P, [x - s * 0.02, top, z + depth * 0.28], -s * 1.1, 1, 0.36, 0.22);
+}
 
 /**
  * A flat triangle a, b, c in the xy plane (counterclockwise seen from +z), d thick along +z.

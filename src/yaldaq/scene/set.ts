@@ -148,7 +148,6 @@ export interface PieceOptions {
   s?: number;
   color?: string;
   items?: 'laptop' | 'ledgers' | 'office';
-  side?: number;
 }
 export type PieceType = keyof typeof PIECES;
 /** A piece of furniture: [type, u, v, turn, options]. */
@@ -258,9 +257,6 @@ export const LAYOUTS: Record<'wide' | 'tall', Layout> = {
       ['archive', 3.0, -5.3, 0, { w: 0.9 }],
       ['archive', 7.35, -5.3, 0, { w: 1.0 }],
       ['hazard', 3.4, -2.25, 0],
-      ['pod', -2.1, 0.8, 0, { side: -1 }],
-      ['pod', 0.6, 1.5, 0, { side: 1 }],
-      ['pod', 2.6, 0.7, -0.12, { side: -1 }],
       ['decorPod', -2.9, 3.35, 0],
       ['decorPod', 3.3, 3.3, 0],
       ['rug', 0.4, 1.6, 0, { w: 6.4, d: 2.9, color: '#4c372b' }],
@@ -381,9 +377,6 @@ export const LAYOUTS: Record<'wide' | 'tall', Layout> = {
       ['plant', -1.05, -10.2, 0, { s: 1.15 }],
       ['hazard', 0.0, -7.45, 0],
       ['archive', 3.4, -10.3, 0, { w: 0.7 }],
-      ['pod', -2.6, -4.6, 0, { side: -1 }],
-      ['pod', -0.4, -5.3, 0, { side: 1 }],
-      ['pod', -0.5, -3.0, 0, { side: -1 }],
       ['rug', -1.3, -4.0, 0, { w: 4.6, d: 3.8, color: '#4c372b' }],
       ['plant', -3.5, -6.2, 0, { s: 0.95 }],
       ['plant', 0.95, -1.8, 0, { s: 0.9 }],
@@ -917,19 +910,6 @@ const PIECES = {
       );
       b.castShadow = false;
     }
-  },
-  pod(k: Kit, o: PieceOptions): void {
-    // A walnut wing beside the station of a character, with two monitors turned in.
-    const s = o.side ?? 1;
-    const x = s * 0.9;
-    k.box([0.55, 0.05, 0.6], [x, 0.525, 0.05], PAL.walnutTop);
-    k.box([0.05, 0.5, 0.55], [x + s * 0.25, 0.25, 0.05], PAL.walnut);
-    k.box([0.5, 0.26, 0.03], [x, 0.3, 0.33], PAL.walnut);
-    monitor(k, [x, 0.55, -0.05], -s * 0.55, 0, 0.42, 0.26);
-    monitor(k, [x - s * 0.02, 0.55, 0.3], -s * 1.1, 1, 0.36, 0.22);
-    // A low glass screen at the back of the pod.
-    k.box([1.6, 0.5, 0.02], [s * 0.45, 0.82, -0.45], PAL.glass);
-    k.box([1.6, 0.03, 0.04], [s * 0.45, 1.07, -0.45], PAL.frame);
   },
   decorPod(k: Kit): void {
     // An empty desk with its screens to the viewer and its chair on the near side.

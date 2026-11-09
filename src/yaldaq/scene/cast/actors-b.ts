@@ -28,7 +28,7 @@ import {
   walkSteps,
 } from './core';
 import type { Builder, Step } from './core';
-import { buildCoin, cap, clipboard, hair, rigPerson, stampTool } from './rig';
+import { buildCoin, cap, clipboard, deskWing, hair, rigPerson, stampTool } from './rig';
 
 export const ACTORS_B: Partial<Record<Actor, Builder>> = {
   ladder(c) {
@@ -119,6 +119,7 @@ export const ACTORS_B: Partial<Record<Actor, Builder>> = {
     P.box([0.98, 0.48, 0.28], [0, 0.24, 0], '#e7d3b8', null, st);
     P.box([1.04, 0.05, 0.34], [0, 0.505, 0], '#8a5a35', null, st);
     P.box([0.98, 0.07, 0.01], [0, 0.36, 0.145], '#c2548a', null, st);
+    deskWing(P, { side: -1, edge: 0.52, front: 0.61, depth: 0.66, top: 0.53, body: '#e7d3b8' });
     for (let i = 0; i < 3; i++) {
       P.box(
         [0.3, 0.018, 0.2],
@@ -326,6 +327,7 @@ export const ACTORS_B: Partial<Record<Actor, Builder>> = {
         P.box([0.05, 0.48, 0.05], [sx * 0.42, 0.24, sz * 0.14], '#6e4628', null, st);
     }
     P.box([0.9, 0.26, 0.02], [0, 0.34, 0.16], '#a87b4f', null, st);
+    deskWing(P, { side: 1, edge: 0.47, front: 0.64, depth: 0.66, top: 0.525 });
     const mon = P.sub([-0.28, 0.525, -0.02], st);
     mon.rotation.y = 0.25;
     P.box([0.05, 0.08, 0.05], [0, 0.04, 0], '#3a3a3c', null, mon);
