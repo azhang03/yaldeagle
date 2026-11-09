@@ -454,7 +454,8 @@ export function widgetHTML(subject: Subject, f: Facts, ctx: BadgeContext, ui: Ba
           <div class="sd-t"><span>printed ${fmtClock(x.exAt, true)}</span>${seen}</div></div>`;
         })
         .join('');
-      return `${hd('From trade to paper fill', 'the bar is one 5 min watch')}${rows}`;
+      const aside = fills.some((x) => x.lag != null) ? 'the bar is one 5 min watch' : '';
+      return `${hd('From trade to paper fill', aside)}${rows}`;
     }
     case 'demo': {
       const kinds = Object.entries(d.byKind ?? {}).sort((a, b) => b[1] - a[1]);

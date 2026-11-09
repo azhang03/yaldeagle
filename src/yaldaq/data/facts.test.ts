@@ -69,6 +69,27 @@ describe('factsFor', () => {
     });
   });
 
+  it('leaves sealed fills out of the mean time to see a fill', () => {
+    // The open fill (lag 40 s) and a sealed fill 20 s later.
+    const mixed: typeof FIXTURE = {
+      ...FIXTURE,
+      days: FIXTURE.days.map((d) => ({
+        ...d,
+        events: d.events.flatMap((e) => {
+          if (e.kind !== 'fill') return [e];
+          const sealed = { ...e, t: '2026-11-01T09:31:00Z' };
+          delete sealed.t_exchange;
+          return [e, sealed];
+        }),
+      })),
+    };
+    const f = factsFor('shadow', buildModel(mixed), ms('2026-11-01T10:00:00Z'));
+    expect(f.stats.find((s) => s.key === 'lag')).toMatchObject({
+      value: 40,
+      note: 'sealed fills left out',
+    });
+  });
+
   it('leaves the sealed fixes out of the largest fix', () => {
     // A's repair (0.02) is open; B's is sealed (null).
     expect(statOf('ladder', 'fix', '2026-11-01T16:00:00Z')).toMatchObject({
