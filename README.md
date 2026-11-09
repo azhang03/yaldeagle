@@ -7,6 +7,8 @@ Yaldeagle is a small 3D toy for the browser, made for Nicholas Yalda. Nicholas i
 - Drag an item to move it. On a touch screen, hold the item for half a second first. The places reset when the page loads again.
 - On a phone, swipe to pan, pinch to zoom, and tap to click.
 
+The site has a second view: YALDAQ, Andrew's forecasting project, as a quant firm at night (`/yaldaq`). The toggle at the top switches between the views with an elevator lift. The firm plays YALDAQ's public feed about 5 minutes behind real time. A tap on a character, the data vault, or the wall screen opens a staff badge with its facts. Until YALDAQ's exporter uploads to the store, the firm says "No news yet".
+
 ## Requirements
 
 - Node 20.19 or later in the 20 line, or Node 22.12 or later. CI checks Node 20 and Node 26.
