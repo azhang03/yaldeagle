@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SUBJECTS, allFacts, factsFor, type Stat, type Subject } from './facts';
 import { ms } from './format';
 import { buildModel } from './model';
-import { FIXTURE } from './test-fixture';
+import { FIXTURE, FIXTURE_SEALED_FILL } from './test-fixture';
 
 const model = buildModel(FIXTURE);
 const A = 'env-0000aaaa';
@@ -56,6 +56,26 @@ describe('factsFor', () => {
     const after = factsFor('board', model, ms('2026-11-02T07:00:00Z'));
     expect(after.status).toEqual({ tone: 'ok', text: '3 settled markets' });
     expect(after.stats.find((s) => s.key === 'claude')?.value).toBe(0.1133);
+  });
+
+  it('gives a sealed fill no print time and no lag', () => {
+    const open = factsFor('shadow', model, ms('2026-11-01T10:00:00Z'));
+    expect(open.detail.fills?.[0]?.lag).toBe(40);
+    const sealed = factsFor('shadow', buildModel(FIXTURE_SEALED_FILL), ms('2026-11-01T10:00:00Z'));
+    expect(sealed.detail.fills?.[0]).toMatchObject({ exAt: null, lag: null });
+    expect(sealed.stats.find((s) => s.key === 'lag')).toMatchObject({
+      value: null,
+      note: 'sealed until the envelope opens',
+    });
+  });
+
+  it('leaves the sealed fixes out of the largest fix', () => {
+    // A's repair (0.02) is open; B's is sealed (null).
+    expect(statOf('ladder', 'fix', '2026-11-01T16:00:00Z')).toMatchObject({
+      value: 0.02,
+      note: 'sealed fixes left out',
+    });
+    expect(statOf('ladder', 'fix', '2026-11-02T08:00:00Z')?.value).toBe('sealed');
   });
 
   it('lists the open gap of the trading loop up to t', () => {

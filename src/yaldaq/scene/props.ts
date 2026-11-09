@@ -12,6 +12,7 @@ import {
   PlaneGeometry,
   type Vector3,
 } from 'three';
+import { skillPct, skillScore } from '../data/scores';
 import { type Vec3, kit, texture } from './kit';
 import { PAL, ctx2d, desk, monitor, paint, poolMesh } from './set';
 
@@ -388,7 +389,7 @@ function drawBoard(c: CanvasRenderingContext2D, v: BoardValues): void {
   c.font = '800 64px system-ui, sans-serif';
   c.fillText('Claude vs Actuary', BOARD_W / 2, 62);
   const empty = v.markets === 0;
-  const col = (x: number, name: string, color: string, val: number | null, lead: boolean): void => {
+  const col = (x: number, name: string, color: string, val: number | null, lead: string): void => {
     c.fillStyle = color;
     c.font = '800 50px system-ui, sans-serif';
     c.fillText(name, x, 146);
@@ -396,13 +397,18 @@ function drawBoard(c: CanvasRenderingContext2D, v: BoardValues): void {
     c.fillText(empty ? '--' : score(val), x, 252);
     if (lead) {
       c.font = '700 30px system-ui, sans-serif';
-      c.fillText('LEADS', x, 340);
+      c.fillText(lead, x, 340, 470);
     }
   };
   const both = !empty && v.claude !== null && v.strike_rate !== null;
   const claudeLeads = both && (v.claude ?? 0) < (v.strike_rate ?? 0);
-  col(262, 'Claude', '#f08a66', v.claude, both && claudeLeads);
-  col(762, 'Actuary', '#6f9cf0', v.strike_rate, both && !claudeLeads);
+  const skill = both ? skillScore(v) : null;
+  const claudeLead =
+    skill != null && skill > 0 ? `LEADS, ${skillPct(skill).toUpperCase()} BETTER` : 'LEADS';
+  const actuaryLead =
+    skill != null && skill < 0 ? `LEADS, CLAUDE ${skillPct(skill).toUpperCase()} WORSE` : 'LEADS';
+  col(262, 'Claude', '#f08a66', v.claude, both && claudeLeads ? claudeLead : '');
+  col(762, 'Actuary', '#6f9cf0', v.strike_rate, both && !claudeLeads ? actuaryLead : '');
   c.fillStyle = '#2a3654';
   c.fillRect(BOARD_W / 2 - 2, 118, 4, 230);
   c.fillStyle = '#9aa6bb';

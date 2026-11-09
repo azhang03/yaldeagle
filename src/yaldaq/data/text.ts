@@ -72,7 +72,7 @@ export function eventText(ev: TimedEvent, opts: EventTextOptions = {}): string |
       return `${who}: ${plural(ev.markets ?? 0, 'market')}, ${plural(ev.searches ?? 0, 'web search', 'web searches')}, ${((end - ev.at) / 1000).toFixed(0)} s, ${fmtUSD(ev.cost_usd ?? 0)}. Forecasts sealed.`;
     }
     case 'ladder.repair':
-      return `${who}: the buckets add up to ${ev.sum_raw?.toFixed(2) ?? '?'}, largest fix ${ev.repair_max?.toFixed(2) ?? '?'}`;
+      return `${who}: the buckets add up to ${ev.sum_raw?.toFixed(2) ?? '?'}, largest fix ${ev.repair_max?.toFixed(2) ?? 'sealed'}`;
     case 'policy.order':
       return `${who}: ${plural(n, 'order')} placed, sealed`;
     case 'policy.pass':
@@ -88,7 +88,8 @@ export function eventText(ev: TimedEvent, opts: EventTextOptions = {}): string |
       return `${who}: tick. ${watch.length ? `Watching ${watch.join(' and ')}` : 'Nothing open'}`;
     }
     case 'shadow.fill':
-      return `${who}: a paper fill, sealed. The trade printed at ${fmtClock(ev.exAt ?? ev.at)}.`;
+      // The print time comes only after the envelope opens.
+      return `${who}: a paper fill, sealed.${ev.exAt != null ? ` The trade printed at ${fmtClock(ev.exAt)}.` : ''}`;
     case 'shadow.settle':
       return `${who}: a market settled`;
     case 'demo.requests':

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ms } from './format';
-import { boardAt } from './scores';
+import { boardAt, skillPct, skillScore } from './scores';
 import { FIXTURE } from './test-fixture';
 
 describe('boardAt', () => {
@@ -17,5 +17,24 @@ describe('boardAt', () => {
     expect(b?.realizedUsd).toBe(8);
     expect(b?.latest.envelope).toBe('env-0000aaaa');
     expect(b?.history).toHaveLength(1);
+  });
+});
+
+describe('skillScore', () => {
+  it('compares Claude with the Actuary: above 0 is better, below 0 is worse', () => {
+    // The YALDAQ dry run of 2026-11-09: 0.080 against 0.121.
+    const better = skillScore({ claude: 0.08, strike_rate: 0.121 });
+    expect(better).toBeCloseTo(0.339, 3);
+    expect(skillPct(better!)).toBe('34%');
+    const worse = skillScore({ claude: 0.15, strike_rate: 0.12 });
+    expect(worse).toBeCloseTo(-0.25, 6);
+    expect(skillPct(worse!)).toBe('25%');
+    expect(skillPct(0.004)).toBe('under 1%');
+  });
+
+  it('gives no score when a Brier is null or the Actuary has 0', () => {
+    expect(skillScore({ claude: null, strike_rate: 0.12 })).toBeNull();
+    expect(skillScore({ claude: 0.08, strike_rate: null })).toBeNull();
+    expect(skillScore({ claude: 0.08, strike_rate: 0 })).toBeNull();
   });
 });
