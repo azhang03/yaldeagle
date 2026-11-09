@@ -2,20 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { SUBJECTS, factsFor, indexByActor, type Subject } from '../data/facts';
 import { ms } from '../data/format';
 import { buildModel, stateAt } from '../data/model';
-import { FIXTURE } from '../data/test-fixture';
+import { FIXTURE, FIXTURE_SEALED_FILL } from '../data/test-fixture';
 import { badgeSections } from './content';
 
 const model = buildModel(FIXTURE);
-const by = indexByActor(model);
 const STRIKES = ['below 5', '5 to 9', '10 or more'];
 const ui = { notes: true, logMore: true, bumped: new Set<string>() };
 
 /** The text of all sections of one badge, with the tags removed. */
-function badgeText(subject: Subject, iso: string): string {
+function badgeText(subject: Subject, iso: string, m = model): string {
   const t = ms(iso);
-  const state = stateAt(model, t);
-  const f = factsFor(subject, model, t, { by, state });
-  return Object.values(badgeSections(subject, f, { t, state, model }, ui))
+  const state = stateAt(m, t);
+  const f = factsFor(subject, m, t, { by: indexByActor(m), state });
+  return Object.values(badgeSections(subject, f, { t, state, model: m }, ui))
     .join(' ')
     .replace(/<[^>]*>/g, ' ');
 }
@@ -44,5 +43,19 @@ describe('badgeSections', () => {
   it('shows the scores on the wall screen badge only when a market settles', () => {
     expect(badgeText('board', '2026-11-02T06:59:00Z')).toContain('No settled markets yet');
     expect(badgeText('board', '2026-11-02T07:00:00Z')).toContain('0.113');
+  });
+
+  it('shows no print time and no lag for a sealed fill', () => {
+    const open = badgeText('shadow', '2026-11-01T10:00:00Z');
+    expect(open).toContain('printed 09:30:00');
+    expect(open).toContain('seen after');
+    const sealed = badgeText('shadow', '2026-11-01T10:00:00Z', buildModel(FIXTURE_SEALED_FILL));
+    expect(sealed).toContain('print time sealed');
+    expect(sealed).not.toContain('printed');
+    expect(sealed).not.toContain('seen after');
+  });
+
+  it('says that the largest fix is sealed while the envelope is sealed', () => {
+    expect(badgeText('ladder', '2026-11-01T16:00:00Z')).toMatch(/sealed\s+largest fix/);
   });
 });

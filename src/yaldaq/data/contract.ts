@@ -60,7 +60,7 @@ export interface FeedEvent {
   kind: EventKind;
   envelope?: string | null; // "env-" + 8 hex
   t_end?: string; // claude.call
-  t_exchange?: string; // shadow.fill: when the trade printed
+  t_exchange?: string; // shadow.fill: when the trade printed; only after the envelope opens
   job?: JobName; // cycle, error, stall_check
   counts?: Record<string, number>; // scanner.cycle, loop.cycle
   env?: 'prod' | 'demo'; // requests
@@ -75,7 +75,7 @@ export interface FeedEvent {
   cost_usd?: number; // call, spend
   shape?: string; // ladder.repair
   sum_raw?: number | null; // ladder.repair
-  repair_max?: number | null; // ladder.repair
+  repair_max?: number | null; // ladder.repair: null until the envelope opens
   ok?: boolean; // spend, reconcile
   stage?: string; // pass
   reasons?: Record<string, number>; // pass

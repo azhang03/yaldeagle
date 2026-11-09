@@ -12,7 +12,7 @@ import {
   type RecentResult,
   type State,
 } from '../data/model';
-import type { Board } from '../data/scores';
+import { skillPct, skillScore, type Board } from '../data/scores';
 import { esc } from '../data/text';
 
 /** The colors of the marks on the activity bar. */
@@ -209,7 +209,10 @@ export function boardHTML(board: Board | null, opts: { compact?: boolean } = {})
     <b>${b[f] == null ? '--' : b[f].toFixed(3)}</b></div>`;
   let lead = '';
   if (b.claude != null && b.strike_rate != null && b.claude !== b.strike_rate) {
-    lead = ` ${b.claude < b.strike_rate ? 'Claude' : 'Actuary'} leads.`;
+    const skill = skillScore(b);
+    if (skill == null) lead = ` ${b.claude < b.strike_rate ? 'Claude' : 'Actuary'} leads.`;
+    else if (skill > 0) lead = ` Claude leads, <b>${skillPct(skill)}</b> better than the Actuary.`;
+    else lead = ` Actuary leads. Claude is <b>${skillPct(skill)}</b> worse than the Actuary.`;
   }
   const l = board.latest;
   const latest = `<div class="yq-latest">Just added: <b>${esc(l.series)}</b>, ${l.markets} markets.</div>`;

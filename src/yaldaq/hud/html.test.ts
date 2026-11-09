@@ -34,4 +34,19 @@ describe('boardHTML', () => {
     expect(html).toContain('0.113');
     expect(html).toContain('Paper P&amp;L of settled markets: $8.00');
   });
+
+  it('shows how much better or worse Claude is than the Actuary', () => {
+    const board = boardAt(model.scores, ms('2026-11-02T07:00:00Z'))!;
+    const text = (brier: Partial<typeof board.brier>): string =>
+      boardHTML({ ...board, brier: { ...board.brier, ...brier } }).replace(/<[^>]*>/g, '');
+    // 1 - 0.1133 / 0.1633 = 0.306.
+    expect(text({})).toContain('Claude leads, 31% better than the Actuary.');
+    expect(text({ claude: 0.15, strike_rate: 0.12 })).toContain(
+      'Actuary leads. Claude is 25% worse than the Actuary.',
+    );
+    expect(text({ strike_rate: null })).not.toContain('%');
+    const zero = text({ strike_rate: 0 });
+    expect(zero).toContain('Actuary leads.');
+    expect(zero).not.toContain('%');
+  });
 });

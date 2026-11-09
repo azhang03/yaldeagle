@@ -147,7 +147,7 @@ const day1: FeedEvent[] = [
     envelope: B,
     shape: 'partition',
     sum_raw: 1,
-    repair_max: 0,
+    repair_max: null, // B is sealed, so the exporter leaves out the largest fix
   },
   { t: d1('15:20:15'), actor: 'cost', kind: 'spend', cost_usd: 0.06, ok: true },
   {
@@ -347,6 +347,23 @@ export const FIXTURE: {
   reveals: RevealFile[];
   scores: ScoresFile;
 } = { live, days, reveals: [revealA], scores };
+
+/**
+ * The fixture as an export from before A opened would send its fill: with no print time
+ * (t_exchange). The rest is the same.
+ */
+export const FIXTURE_SEALED_FILL: typeof FIXTURE = {
+  ...FIXTURE,
+  days: days.map((d) => ({
+    ...d,
+    events: d.events.map((e) => {
+      if (e.kind !== 'fill') return e;
+      const sealed = { ...e };
+      delete sealed.t_exchange;
+      return sealed;
+    }),
+  })),
+};
 
 /** The fixture as store files, keyed by path. Tests copy it and change single files. */
 export const FIXTURE_FILES: Record<string, unknown> = {

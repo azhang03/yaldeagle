@@ -532,7 +532,7 @@ export interface Moment {
   at: number;
   kind: 'call' | 'fill' | 'unseal' | 'error' | 'gap';
   label: string;
-  /** A fill: when the trade printed. */
+  /** A fill: when the trade printed. Only after the envelope opens. */
   exAt?: number;
 }
 

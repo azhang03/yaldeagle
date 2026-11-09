@@ -364,17 +364,19 @@ export function widgetHTML(subject: Subject, f: Facts, ctx: BadgeContext, ui: Ba
       const last = repairs[0];
       if (!last) return `${hd('The level')}<div class="empty">No repairs yet.</div>`;
       const fix2 = (v: number | null): string => (v == null ? '-' : v.toFixed(2));
+      // A largest fix comes only after the envelope opens.
+      const fixOf = (v: number | null): string => (v == null ? 'sealed' : v.toFixed(2));
       const off = Math.max(-1, Math.min(1, ((last.sumRaw ?? 1) - 1) / 0.1));
       const rows = repairs
         .map(
           (r) =>
-            `<div class="ld-row"><span>${when(r.at)}</span><b>${esc(short(r.series))}</b><span>sum <b>${fix2(r.sumRaw)}</b></span><span>fix <b>${fix2(r.repairMax)}</b></span></div>`,
+            `<div class="ld-row"><span>${when(r.at)}</span><b>${esc(short(r.series))}</b><span>sum <b>${fix2(r.sumRaw)}</b></span><span>fix <b>${fixOf(r.repairMax)}</b></span></div>`,
         )
         .join('');
       const shape = last.shape === 'partition' ? 'buckets' : esc(last.shape ?? '');
       return `${hd('The level', `${esc(short(last.series))}, ${shape}`)}
         <div class="ld-level"><div class="ld-tube"><span class="ld-mark"></span><span class="ld-bub" style="left:${(50 + off * 40).toFixed(1)}%"></span></div>
-        <div class="ld-read"><b>${fix2(last.sumRaw)}</b><span>raw sum</span></div><div class="ld-read"><b>${fix2(last.repairMax)}</b><span>largest fix</span></div></div>
+        <div class="ld-read"><b>${fix2(last.sumRaw)}</b><span>raw sum</span></div><div class="ld-read"><b>${fixOf(last.repairMax)}</b><span>largest fix</span></div></div>
         <div class="ld-scale"><span>0.90</span><span>1.00</span><span>1.10</span></div>${hd('Checks')}${rows}`;
     }
     case 'policy': {
@@ -440,15 +442,20 @@ export function widgetHTML(subject: Subject, f: Facts, ctx: BadgeContext, ui: Ba
       if (!fills.length)
         return `${hd('Fills')}<div class="empty">No paper fills in the files yet.</div>`;
       const rows = fills
-        .map(
-          (
-            x,
-          ) => `<div class="sd-fill"><div class="sd-h"><b>${esc(short(x.series))}</b><span>seen after <b>${x.lag >= 60 ? fmtDur(x.lag * 1000) : `${x.lag.toFixed(0)} s`}</b></span></div>
+        .map((x) => {
+          const seen = `<span>seen ${fmtClock(x.at, true)}</span>`;
+          // A sealed fill has no print time yet, so it has no lag.
+          if (x.exAt == null || x.lag == null) {
+            return `<div class="sd-fill"><div class="sd-h"><b>${esc(short(x.series))}</b><span>print time sealed</span></div>
+          <div class="sd-t">${seen}</div></div>`;
+          }
+          return `<div class="sd-fill"><div class="sd-h"><b>${esc(short(x.series))}</b><span>seen after <b>${x.lag >= 60 ? fmtDur(x.lag * 1000) : `${x.lag.toFixed(0)} s`}</b></span></div>
           <div class="sd-track"><span style="width:${clampPct(x.lag / 300)}%"></span></div>
-          <div class="sd-t"><span>printed ${fmtClock(x.exAt, true)}</span><span>seen ${fmtClock(x.at, true)}</span></div></div>`,
-        )
+          <div class="sd-t"><span>printed ${fmtClock(x.exAt, true)}</span>${seen}</div></div>`;
+        })
         .join('');
-      return `${hd('From trade to paper fill', 'the bar is one 5 min watch')}${rows}`;
+      const aside = fills.some((x) => x.lag != null) ? 'the bar is one 5 min watch' : '';
+      return `${hd('From trade to paper fill', aside)}${rows}`;
     }
     case 'demo': {
       const kinds = Object.entries(d.byKind ?? {}).sort((a, b) => b[1] - a[1]);

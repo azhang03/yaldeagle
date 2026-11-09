@@ -139,6 +139,7 @@ export interface FactsDetail {
     series: string | null;
     shape: string | null;
     sumRaw: number | null;
+    /** Null while the envelope is sealed. */
     repairMax: number | null;
   }[];
   reasons?: { key: string; label: string; n: number }[];
@@ -146,7 +147,8 @@ export interface FactsDetail {
   gates?: { name: string; on: boolean }[];
   gaps?: Gap[];
   longestGap?: number;
-  fills?: { at: number; exAt: number; lag: number; series: string | null }[];
+  /** exAt and lag are null while the envelope is sealed. */
+  fills?: { at: number; exAt: number | null; lag: number | null; series: string | null }[];
   byKind?: Record<string, number>;
   checks?: { at: number; ok: boolean }[];
   today?: number;
@@ -468,6 +470,8 @@ export function factsFor(
     case 'ladder': {
       const reps = mine.filter((e) => e.kind === 'repair');
       const dayReps = kind('repair');
+      // A repair's largest fix comes only after its envelope opens.
+      const fixes = dayReps.flatMap((e) => (e.repair_max != null ? [e.repair_max] : []));
       out.status = activity(mine, t, 'Fixing the ladder');
       out.stats = [
         stat('repairs', 'events checked, 24 h', dayReps.length),
@@ -477,7 +481,8 @@ export function factsFor(
         stat(
           'fix',
           'largest fix, 24 h',
-          dayReps.length ? Math.max(...dayReps.map((e) => e.repair_max ?? 0)) : null,
+          fixes.length ? Math.max(...fixes) : dayReps.length ? 'sealed' : null,
+          fixes.length && fixes.length < dayReps.length ? { note: 'sealed fixes left out' } : {},
         ),
       ];
       out.detail = {
@@ -571,17 +576,27 @@ export function factsFor(
       break;
     }
     case 'shadow': {
-      const lagOf = (e: TimedEvent): number => (e.at - (e.exAt ?? e.at)) / 1000;
-      const lags = kind('fill').map(lagOf);
+      // A fill's print time comes only after its envelope opens, so a sealed fill has no lag.
+      const lagOf = (e: TimedEvent): number | null =>
+        e.exAt != null ? (e.at - e.exAt) / 1000 : null;
+      const dayFills = kind('fill');
+      const lags = dayFills.flatMap((e) => lagOf(e) ?? []);
+      const lagNote = !dayFills.length
+        ? {}
+        : !lags.length
+          ? { note: 'sealed until the envelope opens' }
+          : lags.length < dayFills.length
+            ? { note: 'sealed fills left out' }
+            : {};
       out.status = activity(mine, t, 'Stamping a fill');
       out.stats = [
-        stat('fills', 'paper fills, 24 h', kind('fill').length, { note: 'prices sealed' }),
+        stat('fills', 'paper fills, 24 h', dayFills.length, { note: 'prices sealed' }),
         stat('watch', 'open markets watched', state.jobs.loop.counts?.open_markets ?? 0),
         stat(
           'lag',
           'mean time to see a fill',
           lags.length ? sum(lags, (x) => x) / lags.length : null,
-          { unit: 's' },
+          { unit: 's', ...lagNote },
         ),
       ];
       out.detail = {
@@ -591,7 +606,7 @@ export function factsFor(
           .reverse()
           .map((e) => ({
             at: e.at,
-            exAt: e.exAt ?? e.at,
+            exAt: e.exAt ?? null,
             lag: lagOf(e),
             series: seriesOf(e.envelope),
           })),
