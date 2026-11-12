@@ -455,7 +455,7 @@ function drawOpening(c: CanvasRenderingContext2D, o: { at: number; secs: number 
   c.font = '800 64px system-ui, sans-serif';
   if (o.secs <= 0) {
     // The time has come, but the store is still empty.
-    c.fillText('YALDAQ opens', mid, 62);
+    c.fillText('YALDAQ opens soon', mid, 62);
     c.fillStyle = '#8ff0b8';
     c.font = '800 104px system-ui, sans-serif';
     c.fillText('Waiting for data', mid, 236, BOARD_W - 80);
