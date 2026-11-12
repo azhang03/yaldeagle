@@ -66,6 +66,12 @@ const EMPTY_BOARD: BoardValues = {
   wipe: 0,
 };
 
+/**
+ * When the first data is due: YALDAQ's host starts the exporter at the pilot's freeze. While the
+ * store is empty, the wall screen counts down to it.
+ */
+const FIRST_DATA_AT = Date.parse('2026-11-16T00:00:00Z');
+
 /** The first part of a series name: "Truth Social posts, daily" gives "Truth Social posts". */
 const short = (series: string | null | undefined): string =>
   String(series ?? '').split(',')[0] ?? '';
@@ -597,7 +603,20 @@ export function mountFirm(
         visit.render(s, jumped);
         updateHover();
       }
-    } else envelopes.update(dt, 0, null);
+    } else {
+      envelopes.update(dt, 0, null);
+      // An empty store: the wall screen counts down to the first data, once a second.
+      const secs =
+        feed.status === 'empty'
+          ? Math.max(0, Math.ceil((FIRST_DATA_AT - Date.now()) / 1000))
+          : undefined;
+      if (secs !== boardWant.opening?.secs) {
+        boardWant =
+          secs === undefined
+            ? EMPTY_BOARD
+            : { ...EMPTY_BOARD, opening: { at: FIRST_DATA_AT, secs } };
+      }
+    }
     hud.update();
     updateBoard(dt);
     locker.update(dt);

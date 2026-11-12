@@ -12,6 +12,7 @@ import {
   PlaneGeometry,
   type Vector3,
 } from 'three';
+import { fmtWhen } from '../data/format';
 import { skillPct, skillScore } from '../data/scores';
 import { type Vec3, kit, texture } from './kit';
 import { PAL, ctx2d, desk, monitor, paint, poolMesh } from './set';
@@ -372,6 +373,11 @@ export interface BoardValues {
   flash: number;
   /** 0 to 1: a green line that wipes down the screen. */
   wipe: number;
+  /**
+   * Set while the store has no data: the screen counts down to the first data in place of the
+   * scores. at: when the first data is due (ms). secs: the whole seconds left, 0 after that.
+   */
+  opening?: { at: number; secs: number };
 }
 
 const score = (v: number | null): string => (v === null ? '--' : v.toFixed(3));
@@ -383,6 +389,10 @@ function drawBoard(c: CanvasRenderingContext2D, v: BoardValues): void {
   g.addColorStop(1, '#0a1124');
   c.fillStyle = g;
   c.fillRect(0, 0, BOARD_W, BOARD_H);
+  if (v.opening) {
+    drawOpening(c, v.opening);
+    return;
+  }
   c.textAlign = 'center';
   c.textBaseline = 'middle';
   c.fillStyle = '#e9edf5';
@@ -433,6 +443,58 @@ function drawBoard(c: CanvasRenderingContext2D, v: BoardValues): void {
     c.fillStyle = `rgba(143, 240, 184, ${(0.35 * v.flash).toFixed(3)})`;
     c.fillRect(0, 0, BOARD_W, BOARD_H);
   }
+}
+
+/** The countdown to the first data: days, hours, minutes, and seconds, as on a launch board. */
+function drawOpening(c: CanvasRenderingContext2D, o: { at: number; secs: number }): void {
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  const mid = BOARD_W / 2;
+  const when = fmtWhen(o.at);
+  c.fillStyle = '#e9edf5';
+  c.font = '800 64px system-ui, sans-serif';
+  if (o.secs <= 0) {
+    // The time has come, but the store is still empty.
+    c.fillText('YALDAQ opens', mid, 62);
+    c.fillStyle = '#8ff0b8';
+    c.font = '800 104px system-ui, sans-serif';
+    c.fillText('Waiting for data', mid, 236, BOARD_W - 80);
+    c.fillStyle = '#9aa6bb';
+    c.font = '500 30px system-ui, sans-serif';
+    c.fillText(`The first data was due ${when}.`, mid, 392);
+    c.fillText('The page checks each minute.', mid, 434);
+    return;
+  }
+  c.fillText('YALDAQ opens in', mid, 62);
+  const s = o.secs;
+  const parts: readonly (readonly [number, string])[] = [
+    [Math.floor(s / 86400), 'DAYS'],
+    [Math.floor((s % 86400) / 3600), 'HOURS'],
+    [Math.floor((s % 3600) / 60), 'MINUTES'],
+    [s % 60, 'SECONDS'],
+  ];
+  const gap = 226;
+  const x0 = mid - 1.5 * gap;
+  parts.forEach(([n, label], i) => {
+    const x = x0 + i * gap;
+    c.fillStyle = '#e9edf5';
+    c.font = '800 132px system-ui, sans-serif';
+    c.fillText(String(n).padStart(2, '0'), x, 228);
+    c.fillStyle = '#9aa6bb';
+    c.font = '700 26px system-ui, sans-serif';
+    c.fillText(label, x, 322);
+    if (i) {
+      c.fillStyle = '#3d4b6e';
+      c.font = '800 96px system-ui, sans-serif';
+      c.fillText(':', x - gap / 2, 220);
+    }
+  });
+  c.fillStyle = '#9aa6bb';
+  c.font = '500 30px system-ui, sans-serif';
+  c.fillText(`First data ${when}.`, mid, 392);
+  c.fillStyle = '#8ff0b8';
+  c.font = '600 28px system-ui, sans-serif';
+  c.fillText('Until then the firm is quiet.', mid, 434);
 }
 
 export interface Board {
